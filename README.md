@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 六度搭桥（Helpme）
 
-## Getting Started
+基于六度分隔理论的人脉接力工具：发起一张求助卡片，朋友们在微信里接力转发，
+把连接你和目标人物的中间人链条识别出来，并标注**最短路径**和**最强路径**。
 
-First, run the development server:
+## 为什么不读通讯录
+
+- 微信从未开放好友关系链 API，小程序无法读取好友列表；
+- 批量上传手机通讯录涉及第三方个人信息，在《个人信息保护法》下不可行。
+
+因此本项目采用**接力转发模式**（Milgram 1967 小世界实验的数字化）：
+链条不靠预先建图计算，而是在每个人主动转发求助卡片的过程中自然涌现。
+转发即背书——比通讯录里躺着的号码质量高得多。
+
+## 核心机制
+
+1. **发起**：创建求助卡片（定向找某人 / 泛找某类资源），获得分享链接；
+2. **接力**：收到链接的人若认识更合适的人，填昵称和与上一跳的关系强度（强/中/弱），
+   生成自己的接力链接继续转发，每一跳都被记录；
+3. **达成**：目标认领后，从认领节点回溯到根即为完整中间人链条；
+4. **多链对比**：分叉传播产生多条链，按跳数（最短）与最弱一环强度（最强，短板效应）排序标注。
+
+## 技术栈
+
+- Next.js (App Router) + TypeScript
+- SQLite (better-sqlite3)，数据文件在 `data/helpme.db`（可用 `DB_PATH` 覆盖）
+- vitest 单元测试
+
+## 开发
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+pnpm test    # 链条引擎与存取层单元测试
+pnpm dev     # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 目录速览
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- `lib/chain.ts` —— 链条引擎：路径回溯、防自环、多链提取与最短/最强排序（纯函数）
+- `lib/store.ts` —— SQLite 存取层：求助 / 接力节点 / 认领
+- `app/r/[nodeId]` —— 接力着陆页（核心页面，SSR + og 分享标签）
+- `app/my/[requestId]` —— 发起人详情页：多链对比与认领人联系方式
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 隐私边界
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+不读取、不收集任何通讯录数据；用户身份为浏览器匿名 token + 自填昵称；
+认领者联系方式自愿填写、仅发起人可见。
