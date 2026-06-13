@@ -435,8 +435,8 @@ a {
   margin: 0 0 8px;
 }
 
-/* 二维码 */
-.qr-block {
+/* 分享海报（文案 + 二维码合成图） */
+.poster-block {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -445,14 +445,27 @@ a {
   text-align: center;
 }
 
-.qr {
-  border-radius: 8px;
-  background: #fff;
+.poster {
+  width: 100%;
+  max-width: 300px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.qr-placeholder {
+.poster-placeholder {
+  width: 100%;
+  max-width: 300px;
+  aspect-ratio: 3 / 4;
   background: #f0f1f3;
-  border-radius: 8px;
+  border-radius: 12px;
+}
+
+.share-fallback {
+  margin-top: 12px;
+}
+
+.share-fallback summary {
+  cursor: pointer;
 }
 
 /* ===== 开发者后台 ===== */

@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { getClientToken, getSavedNickname, saveNickname } from '@/lib/clientToken';
 import { buildShareText } from '@/lib/share';
 import CopyButton from './CopyButton';
-import QrCode from './QrCode';
+import SharePoster from './SharePoster';
 
 type Mode = 'idle' | 'relay' | 'claim';
 
@@ -102,15 +102,18 @@ export default function RelayPanel({ nodeId, title, visibility, rewardType }: Pr
     return (
       <div className='panel success'>
         <h3>🎉 你已经接上这一棒！</h3>
-        <p>把下面这段话整段复制，发给你觉得“可能认识”的朋友或群——你不必认识当事人，传下去就好：</p>
-        <pre className='share-text'>{shareText}</pre>
-        <CopyButton className='primary' text={shareText}>
-          复制这段话去转发
-        </CopyButton>
-        <div className='qr-block'>
-          <QrCode text={shareUrl} />
-          <p className='hint'>链接在微信里若打不开，可让朋友长按二维码「识别图中二维码」打开。</p>
+        <p>推荐转发这张图：长按图片保存，再发给朋友或群，TA 长按就能识别二维码打开——文字和二维码都在图里。</p>
+        <div className='poster-block'>
+          <SharePoster title={title} shareUrl={shareUrl} rewardType={rewardType} asOriginator={false} />
+          <p className='hint'>长按上图「保存图片」或直接转发给微信好友 / 群。</p>
         </div>
+        <details className='share-fallback'>
+          <summary className='meta'>或只复制文字链接</summary>
+          <pre className='share-text'>{shareText}</pre>
+          <CopyButton className='primary' text={shareText}>
+            复制这段话去转发
+          </CopyButton>
+        </details>
         <p className='hint'>
           想随时看看你这一棒传到哪了？<Link href={`/me/${newNodeId}`}>查看我的接力进展</Link>
         </p>

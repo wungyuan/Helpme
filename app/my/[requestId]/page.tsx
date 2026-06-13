@@ -8,7 +8,7 @@ import { use, useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import ChainView, { type ChainViewNode } from '@/components/ChainView';
 import CopyButton from '@/components/CopyButton';
-import QrCode from '@/components/QrCode';
+import SharePoster from '@/components/SharePoster';
 import { getClientToken } from '@/lib/clientToken';
 import { buildShareText } from '@/lib/share';
 
@@ -106,17 +106,20 @@ export default function MyRequestPage({ params }: { params: Promise<{ requestId:
       {shareText && (
         <div className='panel'>
           <h3>把它发出去，链条就开始了</h3>
-          <p className='hint'>整段复制下面这段话，发给你觉得“可能认识相关人”的朋友或群：</p>
-          <pre className='share-text'>{shareText}</pre>
-          <CopyButton className='primary' text={shareText}>
-            复制这段话去分享
-          </CopyButton>
+          <p className='hint'>推荐转发这张图：长按保存，发给可能认识相关人的朋友或群，文字和二维码都在图里。</p>
           {shareUrl && (
-            <div className='qr-block'>
-              <QrCode text={shareUrl} />
-              <p className='hint'>链接在微信里若打不开，可让朋友长按二维码「识别图中二维码」打开。</p>
+            <div className='poster-block'>
+              <SharePoster title={request.title} shareUrl={shareUrl} rewardType={request.rewardType} asOriginator />
+              <p className='hint'>长按上图「保存图片」或直接转发给微信好友 / 群。</p>
             </div>
           )}
+          <details className='share-fallback'>
+            <summary className='meta'>或只复制文字链接</summary>
+            <pre className='share-text'>{shareText}</pre>
+            <CopyButton className='primary' text={shareText}>
+              复制这段话去分享
+            </CopyButton>
+          </details>
         </div>
       )}
 
