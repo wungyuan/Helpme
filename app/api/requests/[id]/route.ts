@@ -1,5 +1,24 @@
 import { NextResponse } from 'next/server';
-import { getNodeProgress, getRequest, getRequestChains, getRootNode } from '@/lib/store';
+import { getNodeProgress, getRequest, getRequestChains, getRootNode, setRequestStatus } from '@/lib/store';
+
+// PATCH /api/requests/:id 发起人手动结束 / 重新开放求助
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const body = await req.json().catch(() => null);
+  const { token, status } = body ?? {};
+  const request = getRequest(id);
+  if (!request) {
+    return NextResponse.json({ error: 'not_found', message: '求助不存在' }, { status: 404 });
+  }
+  if (token !== request.creatorToken) {
+    return NextResponse.json({ error: 'forbidden', message: '只有发起人可以操作' }, { status: 403 });
+  }
+  if (status !== 'open' && status !== 'closed') {
+    return NextResponse.json({ error: 'invalid_input', message: '状态无效' }, { status: 400 });
+  }
+  setRequestStatus(id, status);
+  return NextResponse.json({ ok: true, status });
+}
 
 // GET /api/requests/:id?token=xxx 发起人视角，token 校验通过才返回敏感信息
 // public：返回全部达成链条 + 认领联系方式（发起人有特权）

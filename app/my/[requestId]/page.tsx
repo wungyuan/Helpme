@@ -90,6 +90,17 @@ export default function MyRequestPage({ params }: { params: Promise<{ requestId:
     load();
   }, [load]);
 
+  // 发起人手动结束 / 重新开放
+  async function toggleStatus(next: 'open' | 'closed') {
+    if (next === 'closed' && !confirm('结束后将不再接受新的接力，确定结束这条求助吗？')) return;
+    await fetch(`/api/requests/${requestId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: getClientToken(), status: next }),
+    });
+    load();
+  }
+
   if (error) {
     return (
       <main className='page'>
@@ -122,7 +133,11 @@ export default function MyRequestPage({ params }: { params: Promise<{ requestId:
         {' · '}
         {request.deadlineAt ? `${new Date(request.deadlineAt).toLocaleDateString()} 截止` : '不限时间'}
       </p>
-      {!data.stop.open && (
+      {data.stop.open ? (
+        <button className='chip end-btn' onClick={() => toggleStatus('closed')}>
+          结束这条求助
+        </button>
+      ) : (
         <div className='panel stopped'>
           <h3>已结束</h3>
           <p>
@@ -130,8 +145,13 @@ export default function MyRequestPage({ params }: { params: Promise<{ requestId:
               ? '已到截止时间，不再接受新的接力。'
               : data.stop.reason === 'count'
                 ? '已达到目标匹配数量，不再接受新的接力。'
-                : '该求助已关闭。'}
+                : '你已手动结束这条求助，不再接受新的接力。'}
           </p>
+          {data.stop.reason === 'manual' && (
+            <button className='chip' onClick={() => toggleStatus('open')}>
+              重新开放
+            </button>
+          )}
         </div>
       )}
 

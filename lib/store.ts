@@ -176,6 +176,17 @@ export function createRequest(
   return { request: getRequest(requestId, db)!, rootNodeId };
 }
 
+// 手动开关：发起人结束（closed）或重新开放（open）求助
+// 注意：重新开放后若仍满足数量/截止条件，requestStopState 仍判定为已停止
+export function setRequestStatus(
+  requestId: string,
+  status: 'open' | 'closed',
+  db: Database.Database = getDb()
+): boolean {
+  const res = db.prepare('UPDATE requests SET status = ? WHERE id = ?').run(status, requestId);
+  return res.changes > 0;
+}
+
 export function getRequest(id: string, db: Database.Database = getDb()): HelpRequest | null {
   const row = db.prepare('SELECT * FROM requests WHERE id = ?').get(id) as RequestRow | undefined;
   return row ? toRequest(row) : null;

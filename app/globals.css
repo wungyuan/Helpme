@@ -263,6 +263,12 @@ button:disabled {
   box-shadow: 0 0 0 3px rgba(7, 193, 96, 0.12);
 }
 
+.end-btn {
+  margin-top: 4px;
+  color: var(--danger);
+  border-color: #f0c0c0;
+}
+
 /* 已结束提示面板 */
 .panel.stopped {
   background: #fbfbfc;

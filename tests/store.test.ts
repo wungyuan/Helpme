@@ -8,6 +8,7 @@ import {
   getLandingData,
   getNodeProgress,
   getRequestChains,
+  setRequestStatus,
 } from '../lib/store';
 
 let db: Database.Database;
@@ -174,6 +175,21 @@ describe('getNodeProgress（私密逆向反馈）', () => {
         { parentNodeId: pub.rootNodeId, visitorToken: 'ty', nickname: '乙', relationStrength: 2 },
         db
       )
+    ).not.toThrow();
+  });
+
+  it('发起人手动结束后拒绝接力，重新开放后恢复', () => {
+    const { request, rootNodeId } = seedRequest('public');
+    setRequestStatus(request.id, 'closed', db);
+    expect(getRequestChains(request.id, db)!.stop).toMatchObject({ open: false, reason: 'manual' });
+    expect(() =>
+      createRelayNode({ parentNodeId: rootNodeId, visitorToken: 'a', nickname: '甲', relationStrength: 2 }, db)
+    ).toThrow(/关闭|结束/);
+    // 重新开放后可继续接力
+    setRequestStatus(request.id, 'open', db);
+    expect(getRequestChains(request.id, db)!.stop.open).toBe(true);
+    expect(() =>
+      createRelayNode({ parentNodeId: rootNodeId, visitorToken: 'a', nickname: '甲', relationStrength: 2 }, db)
     ).not.toThrow();
   });
 
