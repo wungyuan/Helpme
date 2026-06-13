@@ -175,28 +175,23 @@ button:disabled {
 }
 
 .chain-node {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 6px 0;
+  padding: 5px 0;
+  border-left: 2px solid #eceef1;
+  padding-left: 12px;
+  margin-left: 4px;
 }
 
-.chain-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: #e8f0fe;
-  color: #3a6df0;
-  display: inline-flex;
+/* 昵称左对齐占满，强弱固定在右侧——多行之间因此列对齐 */
+.chain-row {
+  display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  flex-shrink: 0;
+  gap: 8px;
 }
 
 .chain-name {
+  flex: 1;
   font-size: 15px;
+  text-align: left;
 }
 
 .chain-tag {
@@ -206,30 +201,33 @@ button:disabled {
   margin-left: 6px;
 }
 
-.chain-link {
+.chain-strength {
+  flex-shrink: 0;
+  width: 24px;
+  text-align: center;
   font-size: 12px;
   border-radius: 4px;
-  padding: 1px 6px;
+  padding: 1px 0;
   color: #fff;
 }
 
-.chain-link.strength-3 {
+.chain-strength.strength-3 {
   background: var(--strong);
 }
 
-.chain-link.strength-2 {
+.chain-strength.strength-2 {
   background: var(--mid);
 }
 
-.chain-link.strength-1 {
+.chain-strength.strength-1 {
   background: var(--weak);
 }
 
 .chain-note {
-  width: 100%;
+  display: block;
   color: var(--muted);
   font-size: 13px;
-  padding-left: 40px;
+  margin-top: 2px;
 }
 
 /* 链条卡片 */
@@ -257,4 +255,173 @@ button:disabled {
   font-size: 14px;
   border-top: 1px dashed #e0e3e8;
   padding-top: 8px;
+}
+
+/* 复制成功反馈 */
+button.copied {
+  background: #e8f9f0 !important;
+  border-color: var(--primary) !important;
+  color: var(--primary) !important;
+}
+
+.center {
+  text-align: center;
+}
+
+a {
+  color: var(--primary);
+}
+
+/* 隐私提示 */
+.privacy-note {
+  background: #f3f8ff;
+  border: 1px solid #dbeafe;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: #3a4a63;
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.privacy-note.small {
+  margin: -4px 0 0;
+  background: #fafbfc;
+  border-color: #eceef1;
+}
+
+/* 求助性质标签 */
+.reward-tag {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 8px 0;
+}
+
+.reward-tag.paid {
+  background: #fff7e6;
+  color: #b26a00;
+}
+
+.reward-tag.friendship {
+  background: #fff0f3;
+  color: #c2185b;
+}
+
+.reward-note {
+  color: var(--text);
+  font-size: 13px;
+}
+
+/* 可转发文案块 */
+.share-text {
+  white-space: pre-wrap;
+  word-break: break-all;
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 13px;
+  line-height: 1.6;
+  font-family: inherit;
+  margin: 8px 0 12px;
+}
+
+/* 分支卡片（私密模式进展） */
+.branch-card.achieved {
+  border: 1px solid var(--primary);
+}
+
+.branch-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.branch-head .chain-name {
+  font-weight: 600;
+}
+
+/* 宣传页特性列表 */
+.feature-list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 20px;
+}
+
+.feature-list li {
+  background: var(--card);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  font-size: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* 宣传页动态接力演示 */
+.demo-chain {
+  margin: 20px 0 28px;
+}
+
+.demo-node {
+  opacity: 0;
+  transform: translateY(8px);
+  animation: demo-pop 0.5s ease forwards;
+  animation-delay: calc(var(--i) * 0.7s);
+}
+
+.demo-link {
+  display: block;
+  width: 2px;
+  height: 18px;
+  margin-left: 18px;
+  background: linear-gradient(to bottom, transparent, var(--primary));
+  opacity: 0;
+  animation: demo-fade 0.4s ease forwards;
+  animation-delay: calc(var(--i) * 0.7s - 0.2s);
+}
+
+.demo-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.demo-name {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.demo-role {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+@keyframes demo-pop {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes demo-fade {
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .demo-node,
+  .demo-link {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
 }

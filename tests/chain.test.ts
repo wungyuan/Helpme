@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildChains,
+  childrenByParent,
   indexNodes,
   isTokenInPath,
   rankChains,
+  subtreeHasClaim,
   tracePath,
   type Chain,
   type ChainNode,
@@ -29,7 +31,6 @@ function claim(id: string, nodeId: string): Claim {
   return {
     id,
     nodeId,
-    claimType: 'can_help',
     contact: '13800000000',
     message: null,
     createdAt: ++seq,
@@ -96,6 +97,26 @@ describe('buildChains', () => {
     const [chain] = buildChains(nodes, [claim('cl1', 'a')]);
     expect(chain.hops).toBe(1);
     expect(chain.minStrength).toBe(3);
+  });
+});
+
+describe('childrenByParent + subtreeHasClaim', () => {
+  it('按父节点归类直接下游', () => {
+    const map = childrenByParent(fixture());
+    expect((map.get('root') ?? []).map((n) => n.id).sort()).toEqual(['a', 'd']);
+    expect((map.get('a') ?? []).map((n) => n.id)).toEqual(['b']);
+    expect(map.get('c')).toBeUndefined();
+  });
+
+  it('子树含认领则该支视为达成（私密模式逆向反馈）', () => {
+    const nodes = fixture();
+    const map = childrenByParent(nodes);
+    // 认领发生在 c（在 a 这一支的子树里），不在 d 这一支
+    const claimed = new Set(['c']);
+    expect(subtreeHasClaim(map, claimed, 'a')).toBe(true);
+    expect(subtreeHasClaim(map, claimed, 'd')).toBe(false);
+    // 认领节点本身
+    expect(subtreeHasClaim(map, claimed, 'c')).toBe(true);
   });
 });
 

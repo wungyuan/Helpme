@@ -16,7 +16,6 @@ export interface ChainNode {
 export interface Claim {
   id: string;
   nodeId: string;
-  claimType: 'is_target' | 'can_help';
   contact: string;
   message: string | null;
   createdAt: number;
@@ -41,6 +40,33 @@ export interface RankedChains {
 
 export function indexNodes(nodes: ChainNode[]): Map<string, ChainNode> {
   return new Map(nodes.map((n) => [n.id, n]));
+}
+
+// 直接下游索引：parentNodeId -> 该父节点的所有直接子节点
+export function childrenByParent(nodes: ChainNode[]): Map<string, ChainNode[]> {
+  const map = new Map<string, ChainNode[]>();
+  for (const n of nodes) {
+    if (n.parentNodeId === null) continue;
+    const arr = map.get(n.parentNodeId) ?? [];
+    arr.push(n);
+    map.set(n.parentNodeId, arr);
+  }
+  return map;
+}
+
+// 以 rootNodeId 为根的子树（含自身）是否存在认领——用于私密模式判断“某一支是否已达成”
+export function subtreeHasClaim(
+  childrenMap: Map<string, ChainNode[]>,
+  claimedNodeIds: Set<string>,
+  rootNodeId: string
+): boolean {
+  const stack = [rootNodeId];
+  while (stack.length > 0) {
+    const id = stack.pop()!;
+    if (claimedNodeIds.has(id)) return true;
+    for (const child of childrenMap.get(id) ?? []) stack.push(child.id);
+  }
+  return false;
 }
 
 // 从某节点回溯到根，返回根在前的路径；遇到悬空 parent 或环则抛错

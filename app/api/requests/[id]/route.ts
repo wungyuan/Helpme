@@ -1,43 +1,67 @@
 import { NextResponse } from 'next/server';
-import { getRequestChains } from '@/lib/store';
+import { getNodeProgress, getRequest, getRequestChains, getRootNode } from '@/lib/store';
 
-// GET /api/requests/:id?token=xxx 发起人视角：详情 + 全部达成链条
-// token 校验通过才返回认领者联系方式
+// GET /api/requests/:id?token=xxx 发起人视角，token 校验通过才返回敏感信息
+// public：返回全部达成链条 + 认领联系方式（发起人有特权）
+// private：只返回发起人“直接转发的人”里哪一支达成；联系方式仅在发起人本人是认领者直接上一跳时给出
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const token = new URL(req.url).searchParams.get('token');
-  const result = getRequestChains(id);
-  if (!result) {
+
+  const request = getRequest(id);
+  if (!request) {
     return NextResponse.json({ error: 'not_found', message: '求助不存在' }, { status: 404 });
   }
-  const isCreator = token === result.request.creatorToken;
-  if (!isCreator) {
+  if (token !== request.creatorToken) {
     return NextResponse.json({ error: 'forbidden', message: '只有发起人可以查看' }, { status: 403 });
   }
-  const { request, chains, shortestClaimId, strongestClaimId } = result;
-  return NextResponse.json({
-    request: {
-      id: request.id,
-      title: request.title,
-      description: request.description,
-      type: request.type,
-      targetDesc: request.targetDesc,
-      status: request.status,
-      createdAt: request.createdAt,
-    },
-    chains: chains.map((ch) => ({
-      claim: ch.claim,
-      hops: ch.hops,
-      minStrength: ch.minStrength,
-      avgStrength: ch.avgStrength,
-      nodes: ch.nodes.map((n) => ({
-        id: n.id,
-        nickname: n.nickname,
-        relationStrength: n.relationStrength,
-        forwardNote: n.forwardNote,
+
+  const requestDto = {
+    id: request.id,
+    title: request.title,
+    description: request.description,
+    visibility: request.visibility,
+    rewardType: request.rewardType,
+    rewardNote: request.rewardNote,
+    status: request.status,
+    createdAt: request.createdAt,
+  };
+
+  if (request.visibility === 'public') {
+    const result = getRequestChains(id)!;
+    return NextResponse.json({
+      mode: 'public',
+      request: requestDto,
+      chains: result.chains.map((ch) => ({
+        claim: { id: ch.claim.id, contact: ch.claim.contact, message: ch.claim.message },
+        hops: ch.hops,
+        minStrength: ch.minStrength,
+        avgStrength: ch.avgStrength,
+        nodes: ch.nodes.map((n) => ({
+          id: n.id,
+          nickname: n.nickname,
+          relationStrength: n.relationStrength,
+          forwardNote: n.forwardNote,
+        })),
       })),
+      shortestClaimId: result.shortestClaimId,
+      strongestClaimId: result.strongestClaimId,
+    });
+  }
+
+  // private：发起人即根节点，看自己直接下游的达成情况
+  const root = getRootNode(id)!;
+  const progress = getNodeProgress(root.id)!;
+  return NextResponse.json({
+    mode: 'private',
+    request: requestDto,
+    achievedBranchCount: progress.achievedBranchCount,
+    branches: progress.branches.map((b) => ({
+      childNickname: b.childNickname,
+      achieved: b.achieved,
+      // 仅当发起人直接转发给了认领者本人才会带联系方式
+      claimContact: b.claimContact,
+      claimMessage: b.claimMessage,
     })),
-    shortestClaimId,
-    strongestClaimId,
   });
 }

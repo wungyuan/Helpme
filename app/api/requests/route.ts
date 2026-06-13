@@ -4,20 +4,24 @@ import { createRequest } from '@/lib/store';
 // POST /api/requests 创建求助卡片
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
-  const { creatorToken, nickname, title, description, type, targetDesc } = body ?? {};
+  const { creatorToken, nickname, title, description, visibility, rewardType, rewardNote } = body ?? {};
   if (!creatorToken || !nickname?.trim() || !title?.trim() || !description?.trim()) {
     return NextResponse.json({ error: 'invalid_input', message: '请填写昵称、标题和描述' }, { status: 400 });
   }
-  if (type !== 'direct' && type !== 'resource') {
-    return NextResponse.json({ error: 'invalid_input', message: '求助类型无效' }, { status: 400 });
+  if (visibility !== 'private' && visibility !== 'public') {
+    return NextResponse.json({ error: 'invalid_input', message: '请选择可见性' }, { status: 400 });
+  }
+  if (rewardType !== 'paid' && rewardType !== 'friendship') {
+    return NextResponse.json({ error: 'invalid_input', message: '请选择求助性质' }, { status: 400 });
   }
   const { request, rootNodeId } = createRequest({
     creatorToken,
     nickname: nickname.trim(),
     title: title.trim(),
     description: description.trim(),
-    type,
-    targetDesc: targetDesc?.trim() || null,
+    visibility,
+    rewardType,
+    rewardNote: rewardNote?.trim() || null,
   });
   return NextResponse.json({ requestId: request.id, rootNodeId });
 }

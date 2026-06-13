@@ -8,8 +8,11 @@ CREATE TABLE IF NOT EXISTS requests (
   creator_token TEXT NOT NULL,
   title TEXT NOT NULL,
   description TEXT NOT NULL,
-  type TEXT NOT NULL CHECK (type IN ('direct', 'resource')),
-  target_desc TEXT,
+  -- 可见性：private 接力者只看到直接相连的人；public 可见完整上游链条
+  visibility TEXT NOT NULL CHECK (visibility IN ('private', 'public')),
+  -- 求助性质：paid 有偿 / friendship 友情帮助；reward_note 为附言说明
+  reward_type TEXT NOT NULL CHECK (reward_type IN ('paid', 'friendship')),
+  reward_note TEXT,
   status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
   created_at INTEGER NOT NULL
 );
@@ -28,7 +31,6 @@ CREATE TABLE IF NOT EXISTS nodes (
 CREATE TABLE IF NOT EXISTS claims (
   id TEXT PRIMARY KEY,
   node_id TEXT NOT NULL REFERENCES nodes(id),
-  claim_type TEXT NOT NULL CHECK (claim_type IN ('is_target', 'can_help')),
   contact TEXT NOT NULL,
   message TEXT,
   created_at INTEGER NOT NULL

@@ -1,17 +1,22 @@
 'use client';
 
-// 接力着陆页的操作面板：接力转发 / 认领（我是目标·我能帮）
+// 接力着陆页的操作面板：接力转发 / 认领（我能搭上这个忙）
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { getClientToken, getSavedNickname, saveNickname } from '@/lib/clientToken';
+import { buildShareText } from '@/lib/share';
+import CopyButton from './CopyButton';
 
 type Mode = 'idle' | 'relay' | 'claim';
 
 interface Props {
   nodeId: string;
-  requestType: 'direct' | 'resource';
+  title: string;
+  visibility: 'private' | 'public';
+  rewardType: 'paid' | 'friendship';
 }
 
-export default function RelayPanel({ nodeId, requestType }: Props) {
+export default function RelayPanel({ nodeId, title, visibility, rewardType }: Props) {
   const [mode, setMode] = useState<Mode>('idle');
   const [nickname, setNickname] = useState('');
   const [strength, setStrength] = useState(2);
@@ -20,7 +25,7 @@ export default function RelayPanel({ nodeId, requestType }: Props) {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const [shareUrl, setShareUrl] = useState('');
+  const [newNodeId, setNewNodeId] = useState('');
   const [claimed, setClaimed] = useState(false);
 
   useEffect(() => {
@@ -47,7 +52,7 @@ export default function RelayPanel({ nodeId, requestType }: Props) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message ?? '提交失败');
       saveNickname(nickname);
-      setShareUrl(`${location.origin}/r/${data.nodeId}`);
+      setNewNodeId(data.nodeId);
     } catch (err) {
       setError(err instanceof Error ? err.message : '提交失败');
     } finally {
@@ -67,7 +72,6 @@ export default function RelayPanel({ nodeId, requestType }: Props) {
           visitorToken: getClientToken(),
           nickname,
           relationStrength: strength,
-          claimType: requestType === 'direct' ? 'is_target' : 'can_help',
           contact,
           message,
         }),
@@ -83,14 +87,24 @@ export default function RelayPanel({ nodeId, requestType }: Props) {
     }
   }
 
-  if (shareUrl) {
+  // 接力成功：给出可直接转发的微信文案 + 自己的进展入口
+  if (newNodeId) {
+    const shareUrl = `${location.origin}/r/${newNodeId}`;
+    const shareText = buildShareText({ title, url: shareUrl, rewardType, asOriginator: false });
     return (
       <div className='panel success'>
-        <h3>你已加入接力链</h3>
-        <p>把下面这个链接转发给你认识的、更接近目标的人：</p>
-        <p className='share-url'>{shareUrl}</p>
-        <button onClick={() => navigator.clipboard.writeText(shareUrl)}>复制链接</button>
-        <p className='hint'>在微信里直接把链接粘贴给好友或群即可。</p>
+        <h3>🎉 你已经接上这一棒！</h3>
+        <p>把下面这段话整段复制，发给你觉得“可能认识”的朋友或群——你不必认识当事人，传下去就好：</p>
+        <pre className='share-text'>{shareText}</pre>
+        <CopyButton className='primary' text={shareText}>
+          复制这段话去转发
+        </CopyButton>
+        <p className='hint'>
+          想随时看看你这一棒传到哪了？<Link href={`/me/${newNodeId}`}>查看我的接力进展</Link>
+        </p>
+        <p className='hint'>
+          自己也有想找的人？<Link href='/new'>发起我自己的求助 →</Link>
+        </p>
       </div>
     );
   }
@@ -98,22 +112,40 @@ export default function RelayPanel({ nodeId, requestType }: Props) {
   if (claimed) {
     return (
       <div className='panel success'>
-        <h3>认领成功</h3>
-        <p>发起人会看到完整的接力链条和你的联系方式，请留意对方与你联系。</p>
+        <h3>✅ 收到，你的回应已送出！</h3>
+        <p>
+          {visibility === 'private'
+            ? '你的联系方式只会回传给把这条求助转给你的人（你的直接上一跳），由 TA 逐级转达，不会公开、也不会直接给到发起人之外的人。'
+            : '你的联系方式只有发起人能看到，链条上其他人只会知道“已经有人能帮上忙”。'}
+        </p>
+        <p className='hint'>
+          自己也有想找的人？<Link href='/new'>发起我自己的求助 →</Link>
+        </p>
       </div>
     );
   }
 
   return (
     <div className='panel'>
+      {/* 隐私提示：在动手前先告诉接力者什么可见、什么不可见 */}
+      <div className='privacy-note'>
+        {visibility === 'private' ? (
+          <>
+            🔒 <strong>私密接力</strong>：你只看得到把求助转给你的那个人，看不到更上游是谁；你转发后，只有你自己能查看你这一棒的进展。
+          </>
+        ) : (
+          <>
+            👀 <strong>公开接力</strong>：参与者能看到完整的接力路径，达成后大家都看得到这条链是怎么连成的；但联系方式始终不公开。
+          </>
+        )}
+      </div>
+
       {mode === 'idle' && (
         <div className='actions'>
           <button className='primary' onClick={() => setMode('relay')}>
-            我认识更合适的人，接力转发
+            我帮你传出去（接力转发）
           </button>
-          <button onClick={() => setMode('claim')}>
-            {requestType === 'direct' ? '我就是要找的人' : '我能帮上忙'}
-          </button>
+          <button onClick={() => setMode('claim')}>这事我能搭上忙</button>
         </div>
       )}
 
@@ -153,11 +185,16 @@ export default function RelayPanel({ nodeId, requestType }: Props) {
           {mode === 'claim' && (
             <>
               <label>
-                联系方式（仅发起人可见）
+                联系方式
                 <input value={contact} onChange={(e) => setContact(e.target.value)} placeholder='微信号 / 手机号' />
               </label>
+              <p className='privacy-note small'>
+                {visibility === 'private'
+                  ? '🔒 你的联系方式只回传给把求助转给你的人，不直达发起人、不公开。'
+                  : '🔒 你的联系方式只有发起人能看到，不会公开给链条上其他人。'}
+              </p>
               <label>
-                给发起人留言（可选）
+                给对方留句话（可选）
                 <input value={message} onChange={(e) => setMessage(e.target.value)} />
               </label>
             </>
@@ -170,7 +207,7 @@ export default function RelayPanel({ nodeId, requestType }: Props) {
               disabled={busy}
               onClick={mode === 'relay' ? submitRelay : submitClaim}
             >
-              {busy ? '提交中…' : mode === 'relay' ? '生成我的接力链接' : '提交认领'}
+              {busy ? '提交中…' : mode === 'relay' ? '生成我的接力链接' : '提交'}
             </button>
             <button onClick={() => setMode('idle')}>返回</button>
           </div>

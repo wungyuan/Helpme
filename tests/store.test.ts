@@ -6,6 +6,7 @@ import {
   createRelayNode,
   createRequest,
   getLandingData,
+  getNodeProgress,
   getRequestChains,
 } from '../lib/store';
 
@@ -15,14 +16,15 @@ beforeEach(() => {
   db = createDb(':memory:');
 });
 
-function seedRequest() {
+function seedRequest(visibility: 'private' | 'public' = 'public') {
   return createRequest(
     {
       creatorToken: 'creator',
       nickname: '发起人',
       title: '找一位儿科专家',
       description: '孩子的疑难病例想请专家看看',
-      type: 'resource',
+      visibility,
+      rewardType: 'friendship',
     },
     db
   );
@@ -96,7 +98,6 @@ describe('createClaim + getRequestChains', () => {
         visitorToken: 'tc',
         nickname: '丙医生',
         relationStrength: 3,
-        claimType: 'can_help',
         contact: 'wx: doctor-c',
       },
       db
@@ -112,7 +113,6 @@ describe('createClaim + getRequestChains', () => {
         visitorToken: 'te',
         nickname: '戊医生',
         relationStrength: 2,
-        claimType: 'can_help',
         contact: 'wx: doctor-e',
       },
       db
@@ -125,5 +125,38 @@ describe('createClaim + getRequestChains', () => {
     const chain1 = result.chains.find((ch) => ch.claim.id === c1.id)!;
     expect(chain1.hops).toBe(3);
     expect(chain1.minStrength).toBe(1);
+  });
+});
+
+describe('getNodeProgress（私密逆向反馈）', () => {
+  it('每个节点只看到直接下游；联系方式只回传给认领者的直接上一跳', () => {
+    const { rootNodeId } = seedRequest('private');
+    // root → 甲 → 乙 →(认领) 丙
+    const { node: a } = createRelayNode(
+      { parentNodeId: rootNodeId, visitorToken: 'ta', nickname: '甲', relationStrength: 3 },
+      db
+    );
+    const { node: b } = createRelayNode(
+      { parentNodeId: a.id, visitorToken: 'tb', nickname: '乙', relationStrength: 2 },
+      db
+    );
+    createClaim(
+      { parentNodeId: b.id, visitorToken: 'tc', nickname: '丙', relationStrength: 2, contact: 'wx-c' },
+      db
+    );
+
+    // 发起人（根）只看到“甲”这一支，且已达成，但拿不到联系方式（不是直接上一跳）
+    const rootProg = getNodeProgress(rootNodeId, db)!;
+    expect(rootProg.branches.map((x) => x.childNickname)).toEqual(['甲']);
+    expect(rootProg.branches[0].achieved).toBe(true);
+    expect(rootProg.branches[0].claimContact).toBeNull();
+
+    // 乙是认领者丙的直接上一跳，能拿到联系方式
+    const bProg = getNodeProgress(b.id, db)!;
+    expect(bProg.branches[0].childNickname).toBe('丙');
+    expect(bProg.branches[0].claimContact).toBe('wx-c');
+    expect(bProg.depth).toBe(2);
+    // 私密模式不下发完整链条
+    expect(bProg.publicChains).toBeNull();
   });
 });
