@@ -35,7 +35,7 @@ export default function BarChart({ data }: { data: BarDatum[] }) {
             <rect x={gx} y={pad.top + innerH - rH} width={barW} height={rH} className='bar-req' />
             <rect x={gx + barW + 2} y={pad.top + innerH - sH} width={barW} height={sH} className='bar-ok' />
             <text x={gx + barW} y={H - 14} textAnchor='middle' className='bc-axis'>
-              {d.label.length > 6 ? d.label.slice(5) : d.label}
+              {(d.label ?? '').length > 6 ? d.label.slice(5) : d.label}
             </text>
           </g>
         );

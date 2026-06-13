@@ -2,7 +2,7 @@
 
 // 开发者后台：数据统计（图表）+ 链条/联系方式全量查看，需口令
 import { useCallback, useEffect, useState } from 'react';
-import BarChart, { type BarDatum } from '@/components/BarChart';
+import BarChart from '@/components/BarChart';
 
 type Granularity = 'day' | 'week' | 'month' | 'year';
 const G_LABEL: Record<Granularity, string> = { day: '日', week: '周', month: '月', year: '年' };
@@ -13,7 +13,8 @@ interface Stats {
   totals: { requests: number; successes: number; relayNodes: number; successRate: number };
   byVisibility: { private: number; public: number };
   byReward: { paid: number; friendship: number };
-  series: BarDatum[];
+  // 后台 API 返回的时间桶字段名为 bucket
+  series: { bucket: string; requests: number; successes: number }[];
 }
 
 interface AdminNode {
@@ -141,7 +142,13 @@ export default function AdminPage() {
         </span>
       </h2>
       <div className='panel'>
-        <BarChart data={stats!.series} />
+        <BarChart
+          data={stats!.series.map((s) => ({
+            label: s.bucket,
+            requests: s.requests,
+            successes: s.successes,
+          }))}
+        />
         <p className='legend'>
           <span className='dot req' /> 发起数 <span className='dot ok' /> 成功数
         </p>
