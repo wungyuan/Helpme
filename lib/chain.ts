@@ -10,6 +10,8 @@ export interface ChainNode {
   // 与上一跳的关系强度：3 强 / 2 中 / 1 弱；根节点（发起人）为 null
   relationStrength: number | null;
   forwardNote: string | null;
+  // 留给直接上一跳的联系方式；根节点为 null
+  contact: string | null;
   createdAt: number;
 }
 

@@ -23,6 +23,8 @@ CREATE TABLE IF NOT EXISTS nodes (
   parent_node_id TEXT REFERENCES nodes(id),
   visitor_token TEXT NOT NULL,
   nickname TEXT NOT NULL,
+  -- 接力者留给“直接上一跳”的联系方式：私密必填、公开选填，仅直接上一跳与开发者后台可见
+  contact TEXT,
   relation_strength INTEGER CHECK (relation_strength IN (1, 2, 3)),
   forward_note TEXT,
   created_at INTEGER NOT NULL
@@ -40,6 +42,14 @@ CREATE INDEX IF NOT EXISTS idx_nodes_request ON nodes(request_id);
 CREATE INDEX IF NOT EXISTS idx_claims_node ON claims(node_id);
 `;
 
+// 轻量迁移：为已存在的表补列（CREATE TABLE IF NOT EXISTS 不会改动已有表结构）
+function ensureColumn(db: Database.Database, table: string, column: string, definition: string) {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  if (!cols.some((c) => c.name === column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${definition}`);
+  }
+}
+
 export function createDb(dbPath: string): Database.Database {
   if (dbPath !== ':memory:') {
     fs.mkdirSync(path.dirname(dbPath), { recursive: true });
@@ -47,6 +57,7 @@ export function createDb(dbPath: string): Database.Database {
   const db = new Database(dbPath);
   db.pragma('journal_mode = WAL');
   db.exec(SCHEMA);
+  ensureColumn(db, 'nodes', 'contact', 'contact TEXT');
   return db;
 }
 

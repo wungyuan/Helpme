@@ -29,12 +29,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     },
     you: { nickname: progress.node.nickname, depth: progress.depth, isCreator: progress.isCreator },
     achievedBranchCount: progress.achievedBranchCount,
+    // 你直接转发的人：联系方式只对“直接上一跳”（也就是你）可见，两种模式皆然
     branches: progress.branches.map((b) => ({
+      childNodeId: b.childNodeId,
       childNickname: b.childNickname,
+      childContact: b.childContact,
+      isClaimer: b.isClaimer,
       achieved: b.achieved,
-      // 联系方式回传：仅私密模式、且你是认领者的直接上一跳时给出（公开模式联系方式只归发起人）
-      claimContact: isPublic ? null : b.claimContact,
-      claimMessage: isPublic ? null : b.claimMessage,
+      claimMessage: b.claimMessage,
     })),
     // 公开模式达成后，所有参与者可见完整链条（不含联系方式），关系强弱不下发给接力者
     publicChains:

@@ -22,6 +22,7 @@ function node(partial: Partial<ChainNode> & { id: string }): ChainNode {
     nickname: partial.id,
     relationStrength: null,
     forwardNote: null,
+    contact: null,
     createdAt: ++seq,
     ...partial,
   };

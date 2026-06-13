@@ -56,11 +56,13 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     mode: 'private',
     request: requestDto,
     achievedBranchCount: progress.achievedBranchCount,
+    // 发起人直接转发的人：联系方式可见（你转发给了 TA）
     branches: progress.branches.map((b) => ({
+      childNodeId: b.childNodeId,
       childNickname: b.childNickname,
+      childContact: b.childContact,
+      isClaimer: b.isClaimer,
       achieved: b.achieved,
-      // 仅当发起人直接转发给了认领者本人才会带联系方式
-      claimContact: b.claimContact,
       claimMessage: b.claimMessage,
     })),
   });

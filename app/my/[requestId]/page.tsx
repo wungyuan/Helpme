@@ -8,6 +8,7 @@ import { use, useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import ChainView, { type ChainViewNode } from '@/components/ChainView';
 import CopyButton from '@/components/CopyButton';
+import QrCode from '@/components/QrCode';
 import { getClientToken } from '@/lib/clientToken';
 import { buildShareText } from '@/lib/share';
 
@@ -29,9 +30,11 @@ interface ChainDto {
 }
 
 interface BranchDto {
+  childNodeId: string;
   childNickname: string;
+  childContact: string | null;
+  isClaimer: boolean;
   achieved: boolean;
-  claimContact: string | null;
   claimMessage: string | null;
 }
 
@@ -108,6 +111,12 @@ export default function MyRequestPage({ params }: { params: Promise<{ requestId:
           <CopyButton className='primary' text={shareText}>
             复制这段话去分享
           </CopyButton>
+          {shareUrl && (
+            <div className='qr-block'>
+              <QrCode text={shareUrl} />
+              <p className='hint'>链接在微信里若打不开，可让朋友长按二维码「识别图中二维码」打开。</p>
+            </div>
+          )}
         </div>
       )}
 
@@ -132,7 +141,7 @@ export default function MyRequestPage({ params }: { params: Promise<{ requestId:
               </p>
               <ChainView nodes={ch.nodes} showStrength />
               <p className='contact'>
-                联系方式：<strong>{ch.claim.contact}</strong>
+                🎯 最终者：<strong>{ch.nodes[ch.nodes.length - 1]?.nickname}</strong> · {ch.claim.contact}
                 {ch.claim.message && <span>（留言：{ch.claim.message}）</span>}
               </p>
             </div>
@@ -146,18 +155,25 @@ export default function MyRequestPage({ params }: { params: Promise<{ requestId:
           </p>
           {data.branches.length === 0 && <p className='hint'>你还没把它转发给任何人，先去分享吧。</p>}
           {data.branches.map((b) => (
-            <div key={b.childNickname} className={`panel branch-card${b.achieved ? ' achieved' : ''}`}>
+            <div key={b.childNodeId} className={`panel branch-card${b.achieved ? ' achieved' : ''}`}>
               <p className='branch-head'>
                 <span className='chain-name'>{b.childNickname}</span>
-                {b.achieved ? <span className='badge strong'>这一支已达成 🎉</span> : <span className='meta'>传递中…</span>}
+                {b.isClaimer ? (
+                  <span className='badge strong'>🎯 就是 TA</span>
+                ) : b.achieved ? (
+                  <span className='badge strong'>这一支已达成 🎉</span>
+                ) : (
+                  <span className='meta'>传递中…</span>
+                )}
               </p>
-              {b.claimContact ? (
+              {b.childContact && (
                 <p className='contact'>
-                  对方联系方式：<strong>{b.claimContact}</strong>
+                  {b.isClaimer ? '🎯 最终者' : '联系方式'}：<strong>{b.childNickname}</strong> · {b.childContact}
                   {b.claimMessage && <span>（留言：{b.claimMessage}）</span>}
                 </p>
-              ) : (
-                b.achieved && <p className='hint'>联系方式在下游，请联系 {b.childNickname} 顺着这一支问下去。</p>
+              )}
+              {!b.isClaimer && b.achieved && (
+                <p className='hint'>这一支在下游达成了，请联系 {b.childNickname} 顺着问下去。</p>
               )}
             </div>
           ))}

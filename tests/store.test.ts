@@ -129,15 +129,15 @@ describe('createClaim + getRequestChains', () => {
 });
 
 describe('getNodeProgress（私密逆向反馈）', () => {
-  it('每个节点只看到直接下游；联系方式只回传给认领者的直接上一跳', () => {
+  it('每个节点只看到直接下游，并能拿到直接下游留的联系方式', () => {
     const { rootNodeId } = seedRequest('private');
-    // root → 甲 → 乙 →(认领) 丙
+    // root → 甲 → 乙 →(认领) 丙；每个接力者都留联系方式
     const { node: a } = createRelayNode(
-      { parentNodeId: rootNodeId, visitorToken: 'ta', nickname: '甲', relationStrength: 3 },
+      { parentNodeId: rootNodeId, visitorToken: 'ta', nickname: '甲', relationStrength: 3, contact: 'wx-a' },
       db
     );
     const { node: b } = createRelayNode(
-      { parentNodeId: a.id, visitorToken: 'tb', nickname: '乙', relationStrength: 2 },
+      { parentNodeId: a.id, visitorToken: 'tb', nickname: '乙', relationStrength: 2, contact: 'wx-b' },
       db
     );
     createClaim(
@@ -145,18 +145,56 @@ describe('getNodeProgress（私密逆向反馈）', () => {
       db
     );
 
-    // 发起人（根）只看到“甲”这一支，且已达成，但拿不到联系方式（不是直接上一跳）
+    // 发起人（根）只看到“甲”这一支：能拿到甲的联系方式，但 甲 不是认领者
     const rootProg = getNodeProgress(rootNodeId, db)!;
     expect(rootProg.branches.map((x) => x.childNickname)).toEqual(['甲']);
     expect(rootProg.branches[0].achieved).toBe(true);
-    expect(rootProg.branches[0].claimContact).toBeNull();
+    expect(rootProg.branches[0].childContact).toBe('wx-a');
+    expect(rootProg.branches[0].isClaimer).toBe(false);
 
-    // 乙是认领者丙的直接上一跳，能拿到联系方式
+    // 乙是认领者丙的直接上一跳：丙是最终者，能拿到丙的联系方式
     const bProg = getNodeProgress(b.id, db)!;
     expect(bProg.branches[0].childNickname).toBe('丙');
-    expect(bProg.branches[0].claimContact).toBe('wx-c');
+    expect(bProg.branches[0].childContact).toBe('wx-c');
+    expect(bProg.branches[0].isClaimer).toBe(true);
     expect(bProg.depth).toBe(2);
     // 私密模式不下发完整链条
     expect(bProg.publicChains).toBeNull();
+  });
+
+  it('私密求助接力不留联系方式则拒绝；公开求助可不留', () => {
+    const { rootNodeId } = seedRequest('private');
+    expect(() =>
+      createRelayNode({ parentNodeId: rootNodeId, visitorToken: 'tx', nickname: '甲', relationStrength: 2 }, db)
+    ).toThrow(/联系方式/);
+
+    const pub = seedRequest('public');
+    expect(() =>
+      createRelayNode(
+        { parentNodeId: pub.rootNodeId, visitorToken: 'ty', nickname: '乙', relationStrength: 2 },
+        db
+      )
+    ).not.toThrow();
+  });
+
+  it('昵称重名不报错，身份由 token 区分', () => {
+    const { rootNodeId } = seedRequest('public');
+    const { node: a } = createRelayNode(
+      { parentNodeId: rootNodeId, visitorToken: 't1', nickname: '小明', relationStrength: 2 },
+      db
+    );
+    // 同名不同人（不同 token），且都挂在同一上一跳下
+    expect(() =>
+      createRelayNode(
+        { parentNodeId: rootNodeId, visitorToken: 't2', nickname: '小明', relationStrength: 2 },
+        db
+      )
+    ).not.toThrow();
+    const prog = getNodeProgress(rootNodeId, db)!;
+    expect(prog.branches.filter((x) => x.childNickname === '小明')).toHaveLength(2);
+    // 两个分支的 childNodeId 不同，可作为唯一 key
+    const ids = prog.branches.map((x) => x.childNodeId);
+    expect(new Set(ids).size).toBe(ids.length);
+    void a;
   });
 });

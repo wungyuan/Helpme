@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { getClientToken, getSavedNickname, saveNickname } from '@/lib/clientToken';
 import { buildShareText } from '@/lib/share';
 import CopyButton from './CopyButton';
+import QrCode from './QrCode';
 
 type Mode = 'idle' | 'relay' | 'claim';
 
@@ -21,6 +22,7 @@ export default function RelayPanel({ nodeId, title, visibility, rewardType }: Pr
   const [nickname, setNickname] = useState('');
   const [strength, setStrength] = useState(2);
   const [note, setNote] = useState('');
+  const [relayContact, setRelayContact] = useState('');
   const [contact, setContact] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -35,6 +37,11 @@ export default function RelayPanel({ nodeId, title, visibility, rewardType }: Pr
   }, []);
 
   async function submitRelay() {
+    // 私密求助必须留联系方式，否则结果无法逆向回传到你
+    if (visibility === 'private' && !relayContact.trim()) {
+      setError('私密求助需要留下联系方式');
+      return;
+    }
     setBusy(true);
     setError('');
     try {
@@ -46,6 +53,7 @@ export default function RelayPanel({ nodeId, title, visibility, rewardType }: Pr
           visitorToken: getClientToken(),
           nickname,
           relationStrength: strength,
+          contact: relayContact,
           forwardNote: note,
         }),
       });
@@ -99,6 +107,10 @@ export default function RelayPanel({ nodeId, title, visibility, rewardType }: Pr
         <CopyButton className='primary' text={shareText}>
           复制这段话去转发
         </CopyButton>
+        <div className='qr-block'>
+          <QrCode text={shareUrl} />
+          <p className='hint'>链接在微信里若打不开，可让朋友长按二维码「识别图中二维码」打开。</p>
+        </div>
         <p className='hint'>
           想随时看看你这一棒传到哪了？<Link href={`/me/${newNodeId}`}>查看我的接力进展</Link>
         </p>
@@ -176,10 +188,23 @@ export default function RelayPanel({ nodeId, title, visibility, rewardType }: Pr
           </label>
 
           {mode === 'relay' && (
-            <label>
-              转发理由（可选）
-              <input value={note} onChange={(e) => setNote(e.target.value)} placeholder='例如：我同学在这个领域' />
-            </label>
+            <>
+              <label>
+                你的联系方式{visibility === 'private' ? '（必填）' : '（选填）'}
+                <input
+                  value={relayContact}
+                  onChange={(e) => setRelayContact(e.target.value)}
+                  placeholder='微信号 / 手机号'
+                />
+              </label>
+              <p className='privacy-note small'>
+                🔒 仅把求助转给你的人（你的直接上一跳）能看到，用于结果顺着链条回传给你。昵称可以随便取，留个联系方式上游才找得到你。
+              </p>
+              <label>
+                转发理由（可选）
+                <input value={note} onChange={(e) => setNote(e.target.value)} placeholder='例如：我同学在这个领域' />
+              </label>
+            </>
           )}
 
           {mode === 'claim' && (

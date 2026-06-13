@@ -6,9 +6,11 @@ import { use, useCallback, useEffect, useState } from 'react';
 import { getClientToken } from '@/lib/clientToken';
 
 interface BranchDto {
+  childNodeId: string;
   childNickname: string;
+  childContact: string | null;
+  isClaimer: boolean;
   achieved: boolean;
-  claimContact: string | null;
   claimMessage: string | null;
 }
 
@@ -78,20 +80,27 @@ export default function MyRelayPage({ params }: { params: Promise<{ nodeId: stri
       </h2>
       {data.branches.length === 0 && <p className='hint'>你还没把它转发给任何人。</p>}
       {data.branches.map((b) => (
-        <div key={b.childNickname} className={`panel branch-card${b.achieved ? ' achieved' : ''}`}>
+        <div key={b.childNodeId} className={`panel branch-card${b.achieved ? ' achieved' : ''}`}>
           <p className='branch-head'>
             <span className='chain-name'>{b.childNickname}</span>
-            {b.achieved ? <span className='badge strong'>这一支已达成 🎉</span> : <span className='meta'>传递中…</span>}
+            {b.isClaimer ? (
+              <span className='badge strong'>🎯 就是 TA</span>
+            ) : b.achieved ? (
+              <span className='badge strong'>这一支已达成 🎉</span>
+            ) : (
+              <span className='meta'>传递中…</span>
+            )}
           </p>
-          {b.claimContact ? (
+          {b.childContact && (
             <p className='contact'>
-              对方联系方式：<strong>{b.claimContact}</strong>
+              {b.isClaimer ? '🎯 最终者' : '联系方式'}：<strong>{b.childNickname}</strong> · {b.childContact}
               {b.claimMessage && <span>（留言：{b.claimMessage}）</span>}
               <br />
-              <span className='hint'>请把它转达给把求助传给你的人，让消息顺着链条回去。</span>
+              <span className='hint'>请把结果转达给把求助传给你的人，让消息顺着链条回去。</span>
             </p>
-          ) : (
-            b.achieved && <p className='hint'>联系方式在下游，请联系 {b.childNickname} 顺着问下去。</p>
+          )}
+          {!b.isClaimer && b.achieved && (
+            <p className='hint'>这一支在下游达成了，请联系 {b.childNickname} 顺着问下去。</p>
           )}
         </div>
       ))}
