@@ -251,6 +251,29 @@ button:disabled {
   color: var(--primary);
 }
 
+.badge.rec {
+  background: var(--primary);
+  color: #fff;
+}
+
+/* 推荐第一名的卡片高亮 */
+.chain-card.top,
+.branch-card.top {
+  border: 1px solid var(--primary);
+  box-shadow: 0 0 0 3px rgba(7, 193, 96, 0.12);
+}
+
+/* 已结束提示面板 */
+.panel.stopped {
+  background: #fbfbfc;
+  border: 1px dashed #d0d3d8;
+}
+
+.panel.stopped h3 {
+  color: var(--muted);
+  margin-top: 0;
+}
+
 .contact {
   font-size: 14px;
   border-top: 1px dashed #e0e3e8;

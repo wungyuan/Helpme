@@ -13,6 +13,9 @@ CREATE TABLE IF NOT EXISTS requests (
   -- 求助性质：paid 有偿 / friendship 友情帮助；reward_note 为附言说明
   reward_type TEXT NOT NULL CHECK (reward_type IN ('paid', 'friendship')),
   reward_note TEXT,
+  -- 终止条件：达到匹配数量 或 到达截止时间，任一满足即停止接力/认领（均可为空=不限）
+  target_match_count INTEGER,
+  deadline_at INTEGER,
   status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
   created_at INTEGER NOT NULL
 );
@@ -58,6 +61,8 @@ export function createDb(dbPath: string): Database.Database {
   db.pragma('journal_mode = WAL');
   db.exec(SCHEMA);
   ensureColumn(db, 'nodes', 'contact', 'contact TEXT');
+  ensureColumn(db, 'requests', 'target_match_count', 'target_match_count INTEGER');
+  ensureColumn(db, 'requests', 'deadline_at', 'deadline_at INTEGER');
   return db;
 }
 

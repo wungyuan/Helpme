@@ -24,6 +24,9 @@ export interface HelpRequest {
   visibility: Visibility;
   rewardType: RewardType;
   rewardNote: string | null;
+  // 终止条件：达到匹配数量 或 到达截止时间，任一满足即停止；null = 不限
+  targetMatchCount: number | null;
+  deadlineAt: number | null;
   status: 'open' | 'closed';
   createdAt: number;
 }
@@ -36,8 +39,38 @@ interface RequestRow {
   visibility: Visibility;
   reward_type: RewardType;
   reward_note: string | null;
+  target_match_count: number | null;
+  deadline_at: number | null;
   status: 'open' | 'closed';
   created_at: number;
+}
+
+// 默认推荐前 N 条供发起人挑选（发起人设了匹配数量则用该数量）
+export const DEFAULT_RECOMMEND = 3;
+
+export interface StopState {
+  open: boolean;
+  // 已停止的原因：达到数量 / 到达截止 / 手动关闭
+  reason: 'count' | 'deadline' | 'manual' | null;
+}
+
+// 求助是否仍开放：status 为 open、未到截止、认领数未达目标
+export function requestStopState(
+  request: HelpRequest,
+  claimCount: number,
+  now: number = Date.now()
+): StopState {
+  if (request.status !== 'open') return { open: false, reason: 'manual' };
+  if (request.deadlineAt !== null && now >= request.deadlineAt) return { open: false, reason: 'deadline' };
+  if (request.targetMatchCount !== null && claimCount >= request.targetMatchCount) {
+    return { open: false, reason: 'count' };
+  }
+  return { open: true, reason: null };
+}
+
+// 推荐数量：发起人设的匹配数量优先，否则默认 3
+function recommendCount(request: HelpRequest): number {
+  return request.targetMatchCount ?? DEFAULT_RECOMMEND;
 }
 
 interface NodeRow {
@@ -69,6 +102,8 @@ function toRequest(row: RequestRow): HelpRequest {
     visibility: row.visibility,
     rewardType: row.reward_type,
     rewardNote: row.reward_note,
+    targetMatchCount: row.target_match_count,
+    deadlineAt: row.deadline_at,
     status: row.status,
     createdAt: row.created_at,
   };
@@ -108,6 +143,8 @@ export function createRequest(
     visibility: Visibility;
     rewardType: RewardType;
     rewardNote?: string | null;
+    targetMatchCount?: number | null;
+    deadlineAt?: number | null;
   },
   db: Database.Database = getDb()
 ): { request: HelpRequest; rootNodeId: string } {
@@ -116,8 +153,8 @@ export function createRequest(
   const now = Date.now();
   const insert = db.transaction(() => {
     db.prepare(
-      `INSERT INTO requests (id, creator_token, title, description, visibility, reward_type, reward_note, status, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 'open', ?)`
+      `INSERT INTO requests (id, creator_token, title, description, visibility, reward_type, reward_note, target_match_count, deadline_at, status, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?)`
     ).run(
       requestId,
       input.creatorToken,
@@ -126,6 +163,8 @@ export function createRequest(
       input.visibility,
       input.rewardType,
       input.rewardNote ?? null,
+      input.targetMatchCount ?? null,
+      input.deadlineAt ?? null,
       now
     );
     db.prepare(
@@ -177,7 +216,17 @@ export function createRelayNode(
   const parent = getNode(input.parentNodeId, db);
   if (!parent) throw new StoreError('parent_not_found', '链接无效：上一跳节点不存在');
   const request = getRequest(parent.requestId, db)!;
-  if (request.status !== 'open') throw new StoreError('request_closed', '该求助已关闭');
+  // 终止条件：手动关闭 / 到截止时间 / 已达匹配数量，任一满足即不再接受接力与认领
+  const stop = requestStopState(request, listClaims(request.id, db).length);
+  if (!stop.open) {
+    const msg =
+      stop.reason === 'deadline'
+        ? '该求助已到截止时间，已结束'
+        : stop.reason === 'count'
+          ? '该求助已达到目标匹配数量，已结束'
+          : '该求助已关闭';
+    throw new StoreError('request_stopped', msg);
+  }
 
   const contact = input.contact?.trim() || null;
   if (request.visibility === 'private' && !contact) {
@@ -258,18 +307,29 @@ export function getLandingData(nodeId: string, db: Database.Database = getDb()) 
   const fullPath = tracePath(byId, nodeId);
   const visiblePath = request.visibility === 'public' ? fullPath : fullPath.slice(-1);
   const hiddenUpstream = fullPath.length - visiblePath.length;
-  return { request, node, path: visiblePath, hiddenUpstream };
+  const stop = requestStopState(request, listClaims(request.id, db).length);
+  return { request, node, path: visiblePath, hiddenUpstream, stop };
 }
 
 // 发起人视角（公开模式）：全部达成链条（含认领联系方式），按最短/最强排序
+// recommendedClaimIds：最优前 N 条（N=匹配数量或默认 3）供发起人挑选
 export function getRequestChains(
   requestId: string,
   db: Database.Database = getDb()
-): { request: HelpRequest; chains: Chain[]; shortestClaimId: string | null; strongestClaimId: string | null } | null {
+): {
+  request: HelpRequest;
+  chains: Chain[];
+  shortestClaimId: string | null;
+  strongestClaimId: string | null;
+  recommendedClaimIds: string[];
+  stop: StopState;
+} | null {
   const request = getRequest(requestId, db);
   if (!request) return null;
-  const ranked = rankChains(buildChains(listNodes(requestId, db), listClaims(requestId, db)));
-  return { request, ...ranked };
+  const claims = listClaims(requestId, db);
+  const ranked = rankChains(buildChains(listNodes(requestId, db), claims));
+  const recommendedClaimIds = ranked.chains.slice(0, recommendCount(request)).map((ch) => ch.claim.id);
+  return { request, ...ranked, recommendedClaimIds, stop: requestStopState(request, claims.length) };
 }
 
 // 某一直接下游分支的达成情况
@@ -284,6 +344,11 @@ export interface BranchProgress {
   achieved: boolean;
   // 认领者留言（仅当 isClaimer）
   claimMessage: string | null;
+  // 该分支下“最优一条达成链路”的质量（跳数 / 最弱一环），未达成为 null
+  bestHops: number | null;
+  bestMinStrength: number | null;
+  // 推荐排名：在最优前 N 条里的名次（1 起），不在则 null
+  recommendRank: number | null;
 }
 
 // 节点进展：私密模式逆向反馈的核心数据载体
@@ -297,6 +362,7 @@ export interface NodeProgress {
   achievedBranchCount: number;
   // 公开模式专用：达成后所有人可见的完整链条（联系方式仍仅发起人侧可得）
   publicChains: Chain[] | null;
+  stop: StopState;
 }
 
 export function getNodeProgress(nodeId: string, db: Database.Database = getDb()): NodeProgress | null {
@@ -310,9 +376,28 @@ export function getNodeProgress(nodeId: string, db: Database.Database = getDb())
   const childrenMap = childrenByParent(allNodes);
   const byId = indexNodes(allNodes);
 
+  // 全局排好序的达成链条（最短→最强），用于给“经过当前节点的分支”排推荐
+  const rankedChains = rankChains(buildChains(allNodes, claims)).chains;
+  const nodeDepth = tracePath(byId, node.id).length - 1;
+  // 经过当前节点的链条，按排名取每个直接下游分支的最优链路；orderedBranchIds 即推荐顺序
+  const branchBest = new Map<string, { hops: number; minStrength: number }>();
+  const orderedBranchIds: string[] = [];
+  for (const ch of rankedChains) {
+    const pos = ch.nodes.findIndex((n) => n.id === node.id);
+    if (pos === -1 || pos + 1 >= ch.nodes.length) continue;
+    const branchId = ch.nodes[pos + 1].id;
+    if (!branchBest.has(branchId)) {
+      branchBest.set(branchId, { hops: ch.hops, minStrength: ch.minStrength });
+      orderedBranchIds.push(branchId);
+    }
+  }
+  const topN = orderedBranchIds.slice(0, recommendCount(request));
+
   const children = childrenMap.get(node.id) ?? [];
   const branches: BranchProgress[] = children.map((child) => {
     const directClaim = claimByNodeId.get(child.id) ?? null;
+    const best = branchBest.get(child.id) ?? null;
+    const rank = topN.indexOf(child.id);
     return {
       childNodeId: child.id,
       childNickname: child.nickname,
@@ -320,22 +405,30 @@ export function getNodeProgress(nodeId: string, db: Database.Database = getDb())
       isClaimer: directClaim !== null,
       achieved: subtreeHasClaim(childrenMap, claimedNodeIds, child.id),
       claimMessage: directClaim?.message ?? null,
+      bestHops: best?.hops ?? null,
+      bestMinStrength: best?.minStrength ?? null,
+      recommendRank: rank === -1 ? null : rank + 1,
     };
   });
+  // 推荐在前、达成在前，便于发起人挑选
+  branches.sort((a, b) => {
+    const ra = a.recommendRank ?? Infinity;
+    const rb = b.recommendRank ?? Infinity;
+    if (ra !== rb) return ra - rb;
+    return Number(b.achieved) - Number(a.achieved);
+  });
 
-  const publicChains =
-    request.visibility === 'public'
-      ? rankChains(buildChains(allNodes, claims)).chains
-      : null;
+  const publicChains = request.visibility === 'public' ? rankedChains : null;
 
   return {
     request,
     node,
     isCreator: node.visitorToken === request.creatorToken,
-    depth: tracePath(byId, node.id).length - 1,
+    depth: nodeDepth,
     branches,
     achievedBranchCount: branches.filter((b) => b.achieved).length,
     publicChains,
+    stop: requestStopState(request, claims.length),
   };
 }
 

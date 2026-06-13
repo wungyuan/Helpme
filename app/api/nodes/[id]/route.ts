@@ -27,6 +27,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       rewardNote: request.rewardNote,
       status: request.status,
     },
+    stop: progress.stop,
     you: { nickname: progress.node.nickname, depth: progress.depth, isCreator: progress.isCreator },
     achievedBranchCount: progress.achievedBranchCount,
     // 你直接转发的人：联系方式只对“直接上一跳”（也就是你）可见，两种模式皆然
@@ -37,6 +38,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       isClaimer: b.isClaimer,
       achieved: b.achieved,
       claimMessage: b.claimMessage,
+      bestHops: b.bestHops,
+      bestMinStrength: b.bestMinStrength,
+      recommendRank: b.recommendRank,
     })),
     // 公开模式达成后，所有参与者可见完整链条（不含联系方式），关系强弱不下发给接力者
     publicChains:

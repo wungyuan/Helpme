@@ -13,6 +13,9 @@ export default function NewRequestPage() {
   const [visibility, setVisibility] = useState<'private' | 'public'>('private');
   const [rewardType, setRewardType] = useState<'paid' | 'friendship'>('friendship');
   const [rewardNote, setRewardNote] = useState('');
+  // 终止条件（均可选）：匹配到几条就停 / 多少天后截止
+  const [matchCount, setMatchCount] = useState('3');
+  const [deadlineDays, setDeadlineDays] = useState('7');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -37,6 +40,9 @@ export default function NewRequestPage() {
           visibility,
           rewardType,
           rewardNote,
+          // 空 / 0 表示不限
+          targetMatchCount: matchCount ? Number(matchCount) : null,
+          deadlineAt: deadlineDays ? Date.now() + Number(deadlineDays) * 86400000 : null,
         }),
       });
       const data = await res.json();
@@ -124,6 +130,28 @@ export default function NewRequestPage() {
             placeholder={rewardType === 'paid' ? '例如：成功引荐酬谢 XXX' : '例如：只是想认识、聊聊，绝不打扰'}
           />
         </label>
+
+        <label>
+          终止条件 · 匹配到几条就停（可选）
+          <input
+            type='number'
+            min='1'
+            value={matchCount}
+            onChange={(e) => setMatchCount(e.target.value)}
+            placeholder='留空表示不限数量'
+          />
+        </label>
+        <label>
+          终止条件 · 截止时间（可选）
+          <select value={deadlineDays} onChange={(e) => setDeadlineDays(e.target.value)}>
+            <option value=''>不限时间</option>
+            <option value='3'>3 天后</option>
+            <option value='7'>7 天后</option>
+            <option value='14'>14 天后</option>
+            <option value='30'>30 天后</option>
+          </select>
+        </label>
+        <p className='hint'>两个条件任一达到即停止接力；都留空则一直开放，直到你以后手动关闭。达成多条时为你推荐最优前 {matchCount || 3} 条。</p>
 
         {error && <p className='error'>{error}</p>}
         <button className='primary' disabled={busy} onClick={submit}>

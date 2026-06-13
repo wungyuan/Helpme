@@ -23,6 +23,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     visibility: request.visibility,
     rewardType: request.rewardType,
     rewardNote: request.rewardNote,
+    targetMatchCount: request.targetMatchCount,
+    deadlineAt: request.deadlineAt,
     status: request.status,
     createdAt: request.createdAt,
   };
@@ -32,6 +34,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     return NextResponse.json({
       mode: 'public',
       request: requestDto,
+      stop: result.stop,
+      // 最优前 N 条，供发起人挑选
+      recommendedClaimIds: result.recommendedClaimIds,
       chains: result.chains.map((ch) => ({
         claim: { id: ch.claim.id, contact: ch.claim.contact, message: ch.claim.message },
         hops: ch.hops,
@@ -55,8 +60,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   return NextResponse.json({
     mode: 'private',
     request: requestDto,
+    stop: progress.stop,
     achievedBranchCount: progress.achievedBranchCount,
-    // 发起人直接转发的人：联系方式可见（你转发给了 TA）
+    // 发起人直接转发的人：联系方式可见（你转发给了 TA）；recommendRank 标出最优前 N 支
     branches: progress.branches.map((b) => ({
       childNodeId: b.childNodeId,
       childNickname: b.childNickname,
@@ -64,6 +70,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       isClaimer: b.isClaimer,
       achieved: b.achieved,
       claimMessage: b.claimMessage,
+      bestHops: b.bestHops,
+      bestMinStrength: b.bestMinStrength,
+      recommendRank: b.recommendRank,
     })),
   });
 }

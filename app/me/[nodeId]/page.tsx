@@ -23,6 +23,7 @@ interface ProgressDto {
     rewardNote: string | null;
     status: string;
   };
+  stop: { open: boolean; reason: 'count' | 'deadline' | 'manual' | null };
   you: { nickname: string; depth: number; isCreator: boolean };
   achievedBranchCount: number;
   branches: BranchDto[];
@@ -71,6 +72,19 @@ export default function MyRelayPage({ params }: { params: Promise<{ nodeId: stri
         你是这条链上的第 {you.depth} 棒（{you.nickname}）。
         {request.visibility === 'private' ? '🔒 私密接力，你只看得到你直接转发的人。' : '👀 公开接力。'}
       </p>
+      {!data.stop.open && (
+        <div className='panel stopped'>
+          <p>
+            这条求助已结束
+            {data.stop.reason === 'deadline'
+              ? '（已到截止时间）'
+              : data.stop.reason === 'count'
+                ? '（已达目标匹配数量）'
+                : ''}
+            ，不再接受新的接力。
+          </p>
+        </div>
+      )}
 
       <h2>
         你转发给的人

@@ -177,6 +177,116 @@ describe('getNodeProgress（私密逆向反馈）', () => {
     ).not.toThrow();
   });
 
+  it('达到匹配数量后停止接受新接力', () => {
+    const { request, rootNodeId } = createRequest(
+      {
+        creatorToken: 'c',
+        nickname: '发起',
+        title: 't',
+        description: 'd',
+        visibility: 'public',
+        rewardType: 'friendship',
+        targetMatchCount: 1,
+      },
+      db
+    );
+    const { node: a } = createRelayNode(
+      { parentNodeId: rootNodeId, visitorToken: 'a', nickname: '甲', relationStrength: 2 },
+      db
+    );
+    createClaim({ parentNodeId: a.id, visitorToken: 'b', nickname: '乙', relationStrength: 2, contact: 'x' }, db);
+    // 已达 1 条匹配，再接力应被拒
+    expect(() =>
+      createRelayNode({ parentNodeId: rootNodeId, visitorToken: 'z', nickname: '丙', relationStrength: 2 }, db)
+    ).toThrow(/数量|结束/);
+    expect(getRequestChains(request.id, db)!.stop.open).toBe(false);
+  });
+
+  it('到达截止时间后停止接受新接力', () => {
+    const { rootNodeId } = createRequest(
+      {
+        creatorToken: 'c',
+        nickname: '发起',
+        title: 't',
+        description: 'd',
+        visibility: 'public',
+        rewardType: 'friendship',
+        deadlineAt: Date.now() - 1000,
+      },
+      db
+    );
+    expect(() =>
+      createRelayNode({ parentNodeId: rootNodeId, visitorToken: 'a', nickname: '甲', relationStrength: 2 }, db)
+    ).toThrow(/截止|结束/);
+  });
+
+  it('多条达成时按最优排序推荐前 N 条', () => {
+    const { request, rootNodeId } = createRequest(
+      {
+        creatorToken: 'c',
+        nickname: '发起',
+        title: 't',
+        description: 'd',
+        visibility: 'public',
+        rewardType: 'friendship',
+        targetMatchCount: 2,
+      },
+      db
+    );
+    // 短链：root → 甲 → 认领（2 跳）
+    const { node: a } = createRelayNode(
+      { parentNodeId: rootNodeId, visitorToken: 'a', nickname: '甲', relationStrength: 3 },
+      db
+    );
+    const { claim: short } = createClaim(
+      { parentNodeId: a.id, visitorToken: 'a2', nickname: '甲目标', relationStrength: 3, contact: 'x' },
+      db
+    );
+    // 长链：root → 乙 → 丙 → 认领（3 跳）
+    const { node: b } = createRelayNode(
+      { parentNodeId: rootNodeId, visitorToken: 'b', nickname: '乙', relationStrength: 3 },
+      db
+    );
+    const { node: cc } = createRelayNode(
+      { parentNodeId: b.id, visitorToken: 'c2', nickname: '丙', relationStrength: 3 },
+      db
+    );
+    const { claim: long } = createClaim(
+      { parentNodeId: cc.id, visitorToken: 'c3', nickname: '丙目标', relationStrength: 3, contact: 'y' },
+      db
+    );
+    const result = getRequestChains(request.id, db)!;
+    // N = targetMatchCount = 2，短链排在推荐第一
+    expect(result.recommendedClaimIds).toEqual([short.id, long.id]);
+  });
+
+  it('私密模式给发起人的分支标推荐名次', () => {
+    const { rootNodeId } = seedRequest('private');
+    // 两支：甲(经2跳达成) 与 乙(经3跳达成)
+    const { node: a } = createRelayNode(
+      { parentNodeId: rootNodeId, visitorToken: 'a', nickname: '甲', relationStrength: 3, contact: 'ca' },
+      db
+    );
+    createClaim({ parentNodeId: a.id, visitorToken: 'a2', nickname: '甲目标', relationStrength: 3, contact: 'x' }, db);
+    const { node: b } = createRelayNode(
+      { parentNodeId: rootNodeId, visitorToken: 'b', nickname: '乙', relationStrength: 3, contact: 'cb' },
+      db
+    );
+    const { node: bc } = createRelayNode(
+      { parentNodeId: b.id, visitorToken: 'b2', nickname: '乙下', relationStrength: 3, contact: 'cc' },
+      db
+    );
+    createClaim({ parentNodeId: bc.id, visitorToken: 'b3', nickname: '乙目标', relationStrength: 3, contact: 'y' }, db);
+
+    const prog = getNodeProgress(rootNodeId, db)!;
+    const jia = prog.branches.find((x) => x.childNickname === '甲')!;
+    const yi = prog.branches.find((x) => x.childNickname === '乙')!;
+    expect(jia.recommendRank).toBe(1); // 短链优先
+    expect(yi.recommendRank).toBe(2);
+    expect(jia.bestHops).toBe(2);
+    expect(yi.bestHops).toBe(3);
+  });
+
   it('昵称重名不报错，身份由 token 区分', () => {
     const { rootNodeId } = seedRequest('public');
     const { node: a } = createRelayNode(

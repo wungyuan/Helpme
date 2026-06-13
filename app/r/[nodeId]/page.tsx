@@ -37,8 +37,14 @@ export default async function RelayLandingPage({ params }: Props) {
       </main>
     );
   }
-  const { request, path, hiddenUpstream } = data;
+  const { request, path, hiddenUpstream, stop } = data;
   const forwarder = path[path.length - 1];
+  const stopText =
+    stop.reason === 'deadline'
+      ? '这条求助已到截止时间，接力已结束。'
+      : stop.reason === 'count'
+        ? '这条求助已达到目标匹配数量，接力已结束。'
+        : '这条求助已关闭。';
   return (
     <main className='page'>
       <p className='breadcrumb'>🤝 有人请你帮个忙，传一棒就是一座桥</p>
@@ -62,12 +68,19 @@ export default async function RelayLandingPage({ params }: Props) {
         </>
       )}
 
-      <RelayPanel
-        nodeId={nodeId}
-        title={request.title}
-        visibility={request.visibility}
-        rewardType={request.rewardType}
-      />
+      {stop.open ? (
+        <RelayPanel
+          nodeId={nodeId}
+          title={request.title}
+          visibility={request.visibility}
+          rewardType={request.rewardType}
+        />
+      ) : (
+        <div className='panel stopped'>
+          <h3>接力已结束</h3>
+          <p>{stopText}感谢你愿意搭把手 🙏</p>
+        </div>
+      )}
 
       <p className='hint center'>
         自己也有想找的人？<Link href='/new'>发起我自己的求助 →</Link>
