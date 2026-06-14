@@ -10,7 +10,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "postinstall": "node scripts/ensure-better-sqlite3.mjs"
   },
   "dependencies": {
     "better-sqlite3": "^12.10.0",
