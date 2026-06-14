@@ -6,6 +6,7 @@ import {
   createRelayNode,
   createRequest,
   getLandingData,
+  getMine,
   getNodeProgress,
   getRequestChains,
   setRequestStatus,
@@ -126,6 +127,38 @@ describe('createClaim + getRequestChains', () => {
     const chain1 = result.chains.find((ch) => ch.claim.id === c1.id)!;
     expect(chain1.hops).toBe(3);
     expect(chain1.minStrength).toBe(1);
+  });
+});
+
+describe('getMine（我的记录）', () => {
+  it('按 token 找回我发起的求助与我参与的接力', () => {
+    // 我（token=me）发起一条
+    const { request } = createRequest(
+      {
+        creatorToken: 'me',
+        nickname: '我',
+        title: '我的求助',
+        description: 'd',
+        visibility: 'public',
+        rewardType: 'friendship',
+      },
+      db
+    );
+    // 别人发起的另一条，我去接力
+    const other = seedRequest('public');
+    createRelayNode(
+      { parentNodeId: other.rootNodeId, visitorToken: 'me', nickname: '我', relationStrength: 2 },
+      db
+    );
+
+    const mine = getMine('me', db);
+    expect(mine.created).toHaveLength(1);
+    expect(mine.created[0].title).toBe('我的求助');
+    expect(mine.created[0].rootNodeId).toBeTruthy();
+    // 我发起的根节点不算“接力”，只统计我在别人链上的接力
+    expect(mine.relayed).toHaveLength(1);
+    expect(mine.relayed[0].requestId).toBe(other.request.id);
+    void request;
   });
 });
 

@@ -21,10 +21,7 @@ export default function ChainView({
       {nodes.map((n, i) => (
         <li key={n.id} className='chain-node'>
           <span className='chain-row'>
-            <span className='chain-name'>
-              {n.nickname}
-              {i === 0 && <em className='chain-tag'>发起人</em>}
-            </span>
+            <span className='chain-name'>{n.nickname}</span>
             {showStrength && i > 0 && (
               <span className={`chain-strength strength-${n.relationStrength ?? 1}`}>
                 {STRENGTH_LABEL[n.relationStrength ?? 1]}

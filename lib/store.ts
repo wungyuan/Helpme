@@ -443,6 +443,59 @@ export function getNodeProgress(nodeId: string, db: Database.Database = getDb())
   };
 }
 
+// ===== “我的记录”：凭浏览器 token 找回自己发起/接力的记录 =====
+
+export interface MineCreated {
+  id: string;
+  title: string;
+  rootNodeId: string;
+  visibility: Visibility;
+  status: 'open' | 'closed';
+  createdAt: number;
+}
+
+export interface MineRelayed {
+  nodeId: string;
+  requestId: string;
+  title: string;
+  createdAt: number;
+}
+
+export function getMine(
+  token: string,
+  db: Database.Database = getDb()
+): { created: MineCreated[]; relayed: MineRelayed[] } {
+  const reqRows = db
+    .prepare('SELECT * FROM requests WHERE creator_token = ? ORDER BY created_at DESC')
+    .all(token) as RequestRow[];
+  const created: MineCreated[] = reqRows.map((row) => ({
+    id: row.id,
+    title: row.title,
+    rootNodeId: getRootNode(row.id, db)!.id,
+    visibility: row.visibility,
+    status: row.status,
+    createdAt: row.created_at,
+  }));
+
+  // 我作为接力者/认领者参与的节点（排除我自己发起的根节点）
+  const relayRows = db
+    .prepare(
+      `SELECT n.id AS node_id, n.request_id, n.created_at, r.title
+       FROM nodes n JOIN requests r ON n.request_id = r.id
+       WHERE n.visitor_token = ? AND n.parent_node_id IS NOT NULL
+       ORDER BY n.created_at DESC`
+    )
+    .all(token) as { node_id: string; request_id: string; created_at: number; title: string }[];
+  const relayed: MineRelayed[] = relayRows.map((row) => ({
+    nodeId: row.node_id,
+    requestId: row.request_id,
+    title: row.title,
+    createdAt: row.created_at,
+  }));
+
+  return { created, relayed };
+}
+
 // ===== 开发者后台：统计与全量查看 =====
 
 export type Granularity = 'day' | 'week' | 'month' | 'year';

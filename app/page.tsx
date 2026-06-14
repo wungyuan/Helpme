@@ -15,9 +15,12 @@ export default function Home() {
         <li>🤝 朋友接力转发，每一棒都被记录</li>
         <li>✨ 有人能帮上时，最短、最强的那条桥就浮现出来</li>
       </ol>
-      <Link href='/new' className='primary button'>
+      <Link href='/new' className='primary button cta-main'>
         发起我的求助
       </Link>
+      <p className='center' style={{ marginTop: '12px' }}>
+        <Link href='/mine'>我的记录（发起 / 接力）</Link>
+      </p>
       <div className='home-share'>
         <AppShare />
       </div>

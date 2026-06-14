@@ -161,7 +161,13 @@ export default function MyRequestPage({ params }: { params: Promise<{ requestId:
           <p className='hint'>推荐转发这张图：长按保存，发给可能认识相关人的朋友或群，文字和二维码都在图里。</p>
           {shareUrl && (
             <div className='poster-block'>
-              <SharePoster title={request.title} shareUrl={shareUrl} rewardType={request.rewardType} asOriginator />
+              <SharePoster
+                title={request.title}
+                description={request.description}
+                shareUrl={shareUrl}
+                rewardType={request.rewardType}
+                asOriginator
+              />
               <p className='hint'>长按上图「保存图片」或直接转发给微信好友 / 群。</p>
             </div>
           )}

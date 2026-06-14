@@ -2,13 +2,14 @@
 
 interface ShareOptions {
   title: string;
+  description?: string;
   url: string;
   rewardType: 'paid' | 'friendship';
   // true=发起人首发分享；false=接力者向下游转发
   asOriginator: boolean;
 }
 
-export function buildShareText({ title, url, rewardType, asOriginator }: ShareOptions): string {
+export function buildShareText({ title, description, url, rewardType, asOriginator }: ShareOptions): string {
   const rewardLine = rewardType === 'paid' ? '（这是一次有偿请求，详情见卡片）' : '（纯属友情帮忙，举手之劳）';
   const lead = asOriginator
     ? '🙏 想麻烦你搭把手——'
@@ -19,11 +20,14 @@ export function buildShareText({ title, url, rewardType, asOriginator }: ShareOp
   return [
     lead,
     `【${title}】`,
+    description?.trim() ? description.trim() : null,
     rewardLine,
     ask,
     '👇 点开看看，顺手接一棒：',
     url,
-  ].join('\n');
+  ]
+    .filter(Boolean)
+    .join('\n');
 }
 
 // 分享“整个程序”的宣传文案：说明这个工具能做什么

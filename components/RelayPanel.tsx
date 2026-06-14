@@ -13,11 +13,12 @@ type Mode = 'idle' | 'relay' | 'claim';
 interface Props {
   nodeId: string;
   title: string;
+  description: string;
   visibility: 'private' | 'public';
   rewardType: 'paid' | 'friendship';
 }
 
-export default function RelayPanel({ nodeId, title, visibility, rewardType }: Props) {
+export default function RelayPanel({ nodeId, title, description, visibility, rewardType }: Props) {
   const [mode, setMode] = useState<Mode>('idle');
   const [nickname, setNickname] = useState('');
   const [strength, setStrength] = useState(2);
@@ -98,13 +99,19 @@ export default function RelayPanel({ nodeId, title, visibility, rewardType }: Pr
   // 接力成功：给出可直接转发的微信文案 + 自己的进展入口
   if (newNodeId) {
     const shareUrl = `${location.origin}/r/${newNodeId}`;
-    const shareText = buildShareText({ title, url: shareUrl, rewardType, asOriginator: false });
+    const shareText = buildShareText({ title, description, url: shareUrl, rewardType, asOriginator: false });
     return (
       <div className='panel success'>
         <h3>🎉 你已经接上这一棒！</h3>
         <p>推荐转发这张图：长按图片保存，再发给朋友或群，TA 长按就能识别二维码打开——文字和二维码都在图里。</p>
         <div className='poster-block'>
-          <SharePoster title={title} shareUrl={shareUrl} rewardType={rewardType} asOriginator={false} />
+          <SharePoster
+            title={title}
+            description={description}
+            shareUrl={shareUrl}
+            rewardType={rewardType}
+            asOriginator={false}
+          />
           <p className='hint'>长按上图「保存图片」或直接转发给微信好友 / 群。</p>
         </div>
         <details className='share-fallback'>
@@ -116,9 +123,6 @@ export default function RelayPanel({ nodeId, title, visibility, rewardType }: Pr
         </details>
         <p className='hint'>
           想随时看看你这一棒传到哪了？<Link href={`/me/${newNodeId}`}>查看我的接力进展</Link>
-        </p>
-        <p className='hint'>
-          自己也有想找的人？<Link href='/new'>发起我自己的求助 →</Link>
         </p>
       </div>
     );
@@ -132,9 +136,6 @@ export default function RelayPanel({ nodeId, title, visibility, rewardType }: Pr
           {visibility === 'private'
             ? '你的联系方式只会回传给把这条求助转给你的人（你的直接上一跳），由 TA 逐级转达，不会公开、也不会直接给到发起人之外的人。'
             : '你的联系方式只有发起人能看到，链条上其他人只会知道“已经有人能帮上忙”。'}
-        </p>
-        <p className='hint'>
-          自己也有想找的人？<Link href='/new'>发起我自己的求助 →</Link>
         </p>
       </div>
     );

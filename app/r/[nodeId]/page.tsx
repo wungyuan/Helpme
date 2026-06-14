@@ -72,6 +72,7 @@ export default async function RelayLandingPage({ params }: Props) {
         <RelayPanel
           nodeId={nodeId}
           title={request.title}
+          description={request.description}
           visibility={request.visibility}
           rewardType={request.rewardType}
         />

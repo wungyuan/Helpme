@@ -8,6 +8,8 @@ import QRCode from 'qrcode';
 interface Props {
   title: string;
   shareUrl: string;
+  // 求助详细描述（求助海报会展示在标题下方）
+  description?: string;
   // 求助海报：传 rewardType/asOriginator 自动组文案
   rewardType?: 'paid' | 'friendship';
   asOriginator?: boolean;
@@ -39,7 +41,16 @@ function wrapByChar(ctx: CanvasRenderingContext2D, text: string, maxWidth: numbe
   return lines;
 }
 
-export default function SharePoster({ title, shareUrl, rewardType, asOriginator, lead, body, caption }: Props) {
+export default function SharePoster({
+  title,
+  shareUrl,
+  description,
+  rewardType,
+  asOriginator,
+  lead,
+  body,
+  caption,
+}: Props) {
   const [dataUrl, setDataUrl] = useState('');
 
   useEffect(() => {
@@ -70,9 +81,14 @@ export default function SharePoster({ title, shareUrl, rewardType, asOriginator,
           ? '如果你认识可能合适的人，把它转给 TA 就好，30 秒，就是一座桥。'
           : '你不一定要认识当事人，只要想到“谁可能认识”，转给 TA 接着传就行。');
       const captionText = caption ?? '长按二维码「识别图中二维码」，帮我接一棒';
+      // 求助海报展示详细描述（过长则截断），通用海报不展示
+      const descRaw = !body && description?.trim() ? description.trim() : '';
+      const descText = descRaw.length > 90 ? descRaw.slice(0, 90) + '…' : descRaw;
 
       measure.font = '600 28px -apple-system, "PingFang SC", sans-serif';
       const titleLines = wrapByChar(measure, `【${title}】`, contentW);
+      measure.font = '15px -apple-system, "PingFang SC", sans-serif';
+      const descLines = descText ? wrapByChar(measure, descText, contentW) : [];
       measure.font = '17px -apple-system, "PingFang SC", sans-serif';
       const askLines = wrapByChar(measure, askText, contentW);
 
@@ -80,6 +96,7 @@ export default function SharePoster({ title, shareUrl, rewardType, asOriginator,
       let h = pad;
       h += 30; // lead
       h += titleLines.length * 38 + 8;
+      if (descLines.length) h += descLines.length * 22 + 8;
       if (showReward) h += 26;
       h += askLines.length * 26 + 18;
       h += qrSize + 16;
@@ -114,6 +131,16 @@ export default function SharePoster({ title, shareUrl, rewardType, asOriginator,
       }
       y += 6;
 
+      if (descLines.length) {
+        ctx.fillStyle = '#5a6270';
+        ctx.font = '15px -apple-system, "PingFang SC", sans-serif';
+        for (const l of descLines) {
+          ctx.fillText(l, pad, y);
+          y += 22;
+        }
+        y += 8;
+      }
+
       if (showReward) {
         ctx.fillStyle = rewardType === 'paid' ? '#b26a00' : '#c2185b';
         ctx.font = '15px -apple-system, "PingFang SC", sans-serif';
@@ -146,7 +173,7 @@ export default function SharePoster({ title, shareUrl, rewardType, asOriginator,
     return () => {
       alive = false;
     };
-  }, [title, shareUrl, rewardType, asOriginator, lead, body, caption]);
+  }, [title, shareUrl, description, rewardType, asOriginator, lead, body, caption]);
 
   if (!dataUrl) return <div className='poster-placeholder' />;
   // eslint-disable-next-line @next/next/no-img-element
