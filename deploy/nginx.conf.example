@@ -1,0 +1,35 @@
+# nginx 反向代理示例：把 80/443 的请求转发给本机 3000 端口的 Next.js
+# 放到 /etc/nginx/sites-available/helpme，再 ln -s 到 sites-enabled/，然后 nginx -t && systemctl reload nginx
+# 把 your-domain.com 换成你已备案的域名；证书路径换成你的实际路径
+
+server {
+    listen 80;
+    server_name your-domain.com;
+    # 备案通过、配好 HTTPS 后，把 80 全部跳转到 443
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name your-domain.com;
+
+    # 证书：可用云厂商免费 SSL 证书下载的 nginx 版本，或 certbot 自动签发
+    ssl_certificate     /etc/nginx/ssl/your-domain.com.crt;
+    ssl_certificate_key /etc/nginx/ssl/your-domain.com.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    # 二维码海报、og 卡片等较大响应，放宽 body
+    client_max_body_size 4m;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}
