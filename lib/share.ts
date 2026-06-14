@@ -25,3 +25,14 @@ export function buildShareText({ title, url, rewardType, asOriginator }: ShareOp
     url,
   ].join('\n');
 }
+
+// 分享“整个程序”的宣传文案：说明这个工具能做什么
+export function buildAppShareText(url: string): string {
+  return [
+    '🌉 六度搭桥 · 你想找的那个人，其实只隔几个朋友',
+    '不读通讯录、不加好友——发一张求助卡片，朋友一棒棒接力转发，',
+    '帮你找到能帮上忙的人：找资源、找专家、找供应商、找失联的人都行。',
+    '👇 点开看看，也可以发起你自己的求助：',
+    url,
+  ].join('\n');
+}

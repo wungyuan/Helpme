@@ -122,6 +122,21 @@ button:disabled {
   opacity: 0.6;
 }
 
+/* 次要按钮（描边）：用于“分享这个程序” */
+button.outline,
+.button.outline {
+  display: block;
+  width: 100%;
+  background: #fff;
+  border-color: var(--primary);
+  color: var(--primary);
+  text-align: center;
+}
+
+.home-share {
+  margin-top: 10px;
+}
+
 .actions {
   display: flex;
   flex-direction: column;

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import AppShare from '@/components/AppShare';
 
 export default function Home() {
   return (
@@ -17,6 +18,9 @@ export default function Home() {
       <Link href='/new' className='primary button'>
         发起我的求助
       </Link>
+      <div className='home-share'>
+        <AppShare />
+      </div>
       <p className='center' style={{ marginTop: '12px' }}>
         <Link href='/about'>看看它是怎么找到马斯克的 →</Link>
       </p>
