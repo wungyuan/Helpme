@@ -169,6 +169,18 @@ button.outline,
   font-weight: 600;
 }
 
+/* 通用页脚导航 */
+.site-footer {
+  margin-top: 24px;
+  border-top: 1px solid #eceef1;
+  padding-top: 14px;
+}
+
+.site-footer .sep {
+  margin: 0 8px;
+  color: var(--muted);
+}
+
 .actions {
   display: flex;
   flex-direction: column;

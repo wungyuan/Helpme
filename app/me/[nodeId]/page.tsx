@@ -4,6 +4,7 @@
 import Link from 'next/link';
 import { use, useCallback, useEffect, useState } from 'react';
 import { getClientToken } from '@/lib/clientToken';
+import SiteFooter from '@/components/SiteFooter';
 
 interface BranchDto {
   childNodeId: string;
@@ -107,7 +108,7 @@ export default function MyRelayPage({ params }: { params: Promise<{ nodeId: stri
           </p>
           {b.childContact && (
             <p className='contact'>
-              {b.isClaimer ? '🎯 最终者' : '联系方式'}：<strong>{b.childNickname}</strong> · {b.childContact}
+              {b.isClaimer ? '🎯 最终者联系方式' : '联系方式'}：<strong>{b.childNickname}</strong> · {b.childContact}
               {b.claimMessage && <span>（留言：{b.claimMessage}）</span>}
               <br />
               <span className='hint'>请把结果转达给把求助传给你的人，让消息顺着链条回去。</span>
@@ -142,6 +143,7 @@ export default function MyRelayPage({ params }: { params: Promise<{ nodeId: stri
       <p className='hint center'>
         自己也有想找的人？<Link href='/new'>发起我自己的求助 →</Link>
       </p>
+      <SiteFooter />
     </main>
   );
 }

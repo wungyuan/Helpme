@@ -6,6 +6,7 @@ import {
   createRelayNode,
   createRequest,
   getLandingData,
+  getChainRelation,
   getMine,
   getNodeProgress,
   getRequestChains,
@@ -127,6 +128,32 @@ describe('createClaim + getRequestChains', () => {
     const chain1 = result.chains.find((ch) => ch.claim.id === c1.id)!;
     expect(chain1.hops).toBe(3);
     expect(chain1.minStrength).toBe(1);
+  });
+});
+
+describe('getChainRelation（接力页身份识别）', () => {
+  it('识别发起人、链上接力者与新访客', () => {
+    const { request, rootNodeId } = seedRequest('public');
+    const { node: a } = createRelayNode(
+      { parentNodeId: rootNodeId, visitorToken: 'ta', nickname: '甲', relationStrength: 2 },
+      db
+    );
+
+    // 发起人打开自己的根链接 → creator/self
+    const asCreator = getChainRelation(rootNodeId, request.creatorToken, db)!;
+    expect(asCreator).toMatchObject({ role: 'self', isCreator: true, rootNodeId });
+
+    // 甲打开自己转发出去的链接 → self（不是 outsider，避免“自己接力自己”）
+    const aSelf = getChainRelation(a.id, 'ta', db)!;
+    expect(aSelf).toMatchObject({ role: 'self', isCreator: false, myNodeId: a.id });
+
+    // 发起人打开下游链接 → ancestor + isCreator
+    const creatorOnDeep = getChainRelation(a.id, request.creatorToken, db)!;
+    expect(creatorOnDeep).toMatchObject({ role: 'ancestor', isCreator: true });
+
+    // 陌生人打开 → outsider，可正常接力
+    const outsider = getChainRelation(a.id, 'stranger', db)!;
+    expect(outsider).toMatchObject({ role: 'outsider', isCreator: false, myNodeId: null });
   });
 });
 

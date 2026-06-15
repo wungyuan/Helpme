@@ -299,6 +299,37 @@ export function createClaim(
   return { claim: toClaim(row), nodeId: node.id };
 }
 
+// 访客与某条接力链的关系：用于接力页识别"你是发起人/你已在链上/你是新访客"
+export interface ChainRelation {
+  // outsider 新访客可接力；self 你就是当前落地节点（你转发出去的链接）；ancestor 你在更上游
+  role: 'outsider' | 'self' | 'ancestor';
+  isCreator: boolean;
+  myNodeId: string | null;
+  requestId: string;
+  rootNodeId: string;
+}
+
+export function getChainRelation(
+  nodeId: string,
+  token: string,
+  db: Database.Database = getDb()
+): ChainRelation | null {
+  const node = getNode(nodeId, db);
+  if (!node) return null;
+  const request = getRequest(node.requestId, db)!;
+  const byId = indexNodes(listNodes(node.requestId, db));
+  const path = tracePath(byId, nodeId); // 根 → 当前节点
+  const mine = path.find((n) => n.visitorToken === token) ?? null;
+  const role: ChainRelation['role'] = !mine ? 'outsider' : mine.id === nodeId ? 'self' : 'ancestor';
+  return {
+    role,
+    isCreator: token === request.creatorToken,
+    myNodeId: mine?.id ?? null,
+    requestId: request.id,
+    rootNodeId: path[0].id,
+  };
+}
+
 // 求助根节点（发起人本人的节点）
 export function getRootNode(requestId: string, db: Database.Database = getDb()): ChainNode | null {
   const row = db

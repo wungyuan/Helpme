@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import ChainView from '@/components/ChainView';
-import RelayPanel from '@/components/RelayPanel';
+import RelayLanding from '@/components/RelayLanding';
+import SiteFooter from '@/components/SiteFooter';
 import { getLandingData } from '@/lib/store';
 
 interface Props {
@@ -45,6 +45,12 @@ export default async function RelayLandingPage({ params }: Props) {
       : stop.reason === 'count'
         ? '这条求助已达到目标匹配数量，接力已结束。'
         : '这条求助已关闭。';
+  const toViewNode = (n: (typeof path)[number]) => ({
+    id: n.id,
+    nickname: n.nickname,
+    relationStrength: n.relationStrength,
+    forwardNote: n.forwardNote,
+  });
   return (
     <main className='page'>
       <p className='breadcrumb'>🤝 有人请你帮个忙，传一棒就是一座桥</p>
@@ -56,36 +62,23 @@ export default async function RelayLandingPage({ params }: Props) {
         {request.rewardNote && <span className='reward-note'>{request.rewardNote}</span>}
       </p>
 
-      <h2>谁把它传给了你</h2>
-      {request.visibility === 'public' ? (
-        <ChainView nodes={path} />
-      ) : (
-        <>
-          <ChainView nodes={[forwarder]} />
-          {hiddenUpstream > 0 && (
-            <p className='hint'>这是一条私密接力，更上游的 {hiddenUpstream} 位朋友对你隐藏。</p>
-          )}
-        </>
-      )}
-
-      {stop.open ? (
-        <RelayPanel
-          nodeId={nodeId}
-          title={request.title}
-          description={request.description}
-          visibility={request.visibility}
-          rewardType={request.rewardType}
-        />
-      ) : (
-        <div className='panel stopped'>
-          <h3>接力已结束</h3>
-          <p>{stopText}感谢你愿意搭把手 🙏</p>
-        </div>
-      )}
+      <RelayLanding
+        nodeId={nodeId}
+        title={request.title}
+        description={request.description}
+        visibility={request.visibility}
+        rewardType={request.rewardType}
+        publicChain={path.map(toViewNode)}
+        forwarder={toViewNode(forwarder)}
+        hiddenUpstream={hiddenUpstream}
+        stopOpen={stop.open}
+        stopText={stopText}
+      />
 
       <p className='hint center'>
         自己也有想找的人？<Link href='/new'>发起我自己的求助 →</Link>
       </p>
+      <SiteFooter />
     </main>
   );
 }

@@ -3,12 +3,12 @@
 // 发起人详情页：分享入口 + 达成情况
 // public：完整达成链条（最短/最强对比 + 联系方式）
 // private：只看自己直接转发的人里哪一支达成；联系方式仅在你直接转发给认领者时可见
-import Link from 'next/link';
 import { use, useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import ChainView, { type ChainViewNode } from '@/components/ChainView';
 import CopyButton from '@/components/CopyButton';
 import SharePoster from '@/components/SharePoster';
+import SiteFooter from '@/components/SiteFooter';
 import { getClientToken } from '@/lib/clientToken';
 import { buildShareText } from '@/lib/share';
 
@@ -208,7 +208,8 @@ export default function MyRequestPage({ params }: { params: Promise<{ requestId:
               </p>
               <ChainView nodes={ch.nodes} showStrength />
               <p className='contact'>
-                🎯 最终者：<strong>{ch.nodes[ch.nodes.length - 1]?.nickname}</strong> · {ch.claim.contact}
+                🎯 最终者联系方式：<strong>{ch.nodes[ch.nodes.length - 1]?.nickname}</strong> ·{' '}
+                {ch.claim.contact}
                 {ch.claim.message && <span>（留言：{ch.claim.message}）</span>}
               </p>
             </div>
@@ -248,7 +249,7 @@ export default function MyRequestPage({ params }: { params: Promise<{ requestId:
               )}
               {b.childContact && (
                 <p className='contact'>
-                  {b.isClaimer ? '🎯 最终者' : '联系方式'}：<strong>{b.childNickname}</strong> · {b.childContact}
+                  {b.isClaimer ? '🎯 最终者联系方式' : '联系方式'}：<strong>{b.childNickname}</strong> · {b.childContact}
                   {b.claimMessage && <span>（留言：{b.claimMessage}）</span>}
                 </p>
               )}
@@ -260,9 +261,7 @@ export default function MyRequestPage({ params }: { params: Promise<{ requestId:
         </>
       )}
 
-      <p className='hint center'>
-        想再找一个人？<Link href='/new'>发起新的求助 →</Link>
-      </p>
+      <SiteFooter />
     </main>
   );
 }

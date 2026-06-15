@@ -87,16 +87,15 @@ export default function SharePoster({
 
       measure.font = '600 28px -apple-system, "PingFang SC", sans-serif';
       const titleLines = wrapByChar(measure, `【${title}】`, contentW);
-      measure.font = '15px -apple-system, "PingFang SC", sans-serif';
-      const descLines = descText ? wrapByChar(measure, descText, contentW) : [];
       measure.font = '17px -apple-system, "PingFang SC", sans-serif';
+      const descLines = descText ? wrapByChar(measure, descText, contentW) : [];
       const askLines = wrapByChar(measure, askText, contentW);
 
       // 估算总高度
       let h = pad;
       h += 30; // lead
       h += titleLines.length * 38 + 8;
-      if (descLines.length) h += descLines.length * 22 + 8;
+      if (descLines.length) h += descLines.length * 25 + 8;
       if (showReward) h += 26;
       h += askLines.length * 26 + 18;
       h += qrSize + 16;
@@ -132,11 +131,11 @@ export default function SharePoster({
       y += 6;
 
       if (descLines.length) {
-        ctx.fillStyle = '#5a6270';
-        ctx.font = '15px -apple-system, "PingFang SC", sans-serif';
+        ctx.fillStyle = '#3f4654';
+        ctx.font = '17px -apple-system, "PingFang SC", sans-serif';
         for (const l of descLines) {
           ctx.fillText(l, pad, y);
-          y += 22;
+          y += 25;
         }
         y += 8;
       }
