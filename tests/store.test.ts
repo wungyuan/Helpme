@@ -178,7 +178,7 @@ describe('getMine（我的记录）', () => {
       db
     );
 
-    const mine = getMine('me', db);
+    const mine = getMine('me', null, db);
     expect(mine.created).toHaveLength(1);
     expect(mine.created[0].title).toBe('我的求助');
     expect(mine.created[0].rootNodeId).toBeTruthy();
@@ -186,6 +186,34 @@ describe('getMine（我的记录）', () => {
     expect(mine.relayed).toHaveLength(1);
     expect(mine.relayed[0].requestId).toBe(other.request.id);
     void request;
+  });
+
+  it('换设备：用手机号也能找回自己发起的求助，并显示匹配条数', () => {
+    // 在“设备A”(token=devA)发起，留手机号
+    const { request, rootNodeId } = createRequest(
+      {
+        creatorToken: 'devA',
+        creatorPhone: '138-0000-0000',
+        nickname: '我',
+        title: '找儿科专家',
+        description: 'd',
+        visibility: 'public',
+        rewardType: 'friendship',
+      },
+      db
+    );
+    // 有人接力并认领 → 匹配成功
+    const { node: a } = createRelayNode(
+      { parentNodeId: rootNodeId, visitorToken: 'x', nickname: '甲', relationStrength: 2 },
+      db
+    );
+    createClaim({ parentNodeId: a.id, visitorToken: 'y', nickname: '乙', relationStrength: 2, contact: 'c' }, db);
+
+    // 在“设备B”(token=devB，无此 token 记录) 用手机号找回
+    const mine = getMine('devB', '13800000000', db);
+    expect(mine.created).toHaveLength(1);
+    expect(mine.created[0].id).toBe(request.id);
+    expect(mine.created[0].matchedCount).toBe(1);
   });
 });
 

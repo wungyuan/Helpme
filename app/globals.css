@@ -169,6 +169,40 @@ button.outline,
   font-weight: 600;
 }
 
+.ok-text {
+  color: var(--primary);
+}
+
+/* 求助配图 */
+.request-image {
+  width: 100%;
+  border-radius: 10px;
+  margin: 4px 0 8px;
+  display: block;
+}
+
+/* 上传配图 */
+.image-preview img {
+  width: 100%;
+  border-radius: 10px;
+  margin-bottom: 6px;
+  display: block;
+}
+
+/* 首页通知横幅 */
+.home-notice {
+  display: block;
+  background: #e8f9f0;
+  border: 1px solid var(--primary);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin: 12px 0;
+  color: #06794d;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
 /* 通用页脚导航 */
 .site-footer {
   margin-top: 24px;
@@ -535,14 +569,14 @@ a {
 
 .poster {
   width: 100%;
-  max-width: 300px;
+  max-width: 380px;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .poster-placeholder {
   width: 100%;
-  max-width: 300px;
+  max-width: 380px;
   aspect-ratio: 3 / 4;
   background: #f0f1f3;
   border-radius: 12px;

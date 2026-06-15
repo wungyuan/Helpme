@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import CopyButton from './CopyButton';
 import SharePoster from './SharePoster';
-import { APP_PITCH, buildAppShareText } from '@/lib/share';
+import { APP_DESC, buildAppShareText } from '@/lib/share';
 
 export default function AppShare() {
   const [open, setOpen] = useState(false);
@@ -34,7 +34,7 @@ export default function AppShare() {
           title='六度搭桥'
           shareUrl={url}
           lead='🌉 帮你找到那个人'
-          body={APP_PITCH}
+          body={APP_DESC}
           caption='长按二维码「识别图中二维码」，打开看看'
         />
         <p className='hint'>或长按上图「保存图片」转发给微信好友 / 群，朋友长按识别二维码打开。</p>

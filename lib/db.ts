@@ -6,8 +6,12 @@ const SCHEMA = `
 CREATE TABLE IF NOT EXISTS requests (
   id TEXT PRIMARY KEY,
   creator_token TEXT NOT NULL,
+  -- 发起人手机号（数字）：用于跨设备找回自己发起的求助
+  creator_phone TEXT,
   title TEXT NOT NULL,
   description TEXT NOT NULL,
+  -- 求助配图 URL（可选）
+  image_url TEXT,
   -- 可见性：private 接力者只看到直接相连的人；public 可见完整上游链条
   visibility TEXT NOT NULL CHECK (visibility IN ('private', 'public')),
   -- 求助性质：paid 有偿 / friendship 友情帮助；reward_note 为附言说明
@@ -63,6 +67,8 @@ export function createDb(dbPath: string): Database.Database {
   ensureColumn(db, 'nodes', 'contact', 'contact TEXT');
   ensureColumn(db, 'requests', 'target_match_count', 'target_match_count INTEGER');
   ensureColumn(db, 'requests', 'deadline_at', 'deadline_at INTEGER');
+  ensureColumn(db, 'requests', 'creator_phone', 'creator_phone TEXT');
+  ensureColumn(db, 'requests', 'image_url', 'image_url TEXT');
   return db;
 }
 

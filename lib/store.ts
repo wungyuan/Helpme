@@ -19,8 +19,10 @@ export type RewardType = 'paid' | 'friendship';
 export interface HelpRequest {
   id: string;
   creatorToken: string;
+  creatorPhone: string | null;
   title: string;
   description: string;
+  imageUrl: string | null;
   visibility: Visibility;
   rewardType: RewardType;
   rewardNote: string | null;
@@ -34,8 +36,10 @@ export interface HelpRequest {
 interface RequestRow {
   id: string;
   creator_token: string;
+  creator_phone: string | null;
   title: string;
   description: string;
+  image_url: string | null;
   visibility: Visibility;
   reward_type: RewardType;
   reward_note: string | null;
@@ -43,6 +47,18 @@ interface RequestRow {
   deadline_at: number | null;
   status: 'open' | 'closed';
   created_at: number;
+}
+
+// 手机号归一化为纯数字，便于跨设备匹配
+export function normalizePhone(phone: string | null | undefined): string {
+  return (phone ?? '').replace(/\D/g, '');
+}
+
+// 发起人是否有权查看（本设备 token 命中，或手机号命中）
+export function canViewAsCreator(request: HelpRequest, token: string | null, phone: string | null): boolean {
+  if (token && token === request.creatorToken) return true;
+  const p = normalizePhone(phone);
+  return p.length > 0 && p === normalizePhone(request.creatorPhone);
 }
 
 // 默认推荐前 N 条供发起人挑选（发起人设了匹配数量则用该数量）
@@ -97,8 +113,10 @@ function toRequest(row: RequestRow): HelpRequest {
   return {
     id: row.id,
     creatorToken: row.creator_token,
+    creatorPhone: row.creator_phone,
     title: row.title,
     description: row.description,
+    imageUrl: row.image_url,
     visibility: row.visibility,
     rewardType: row.reward_type,
     rewardNote: row.reward_note,
@@ -137,9 +155,11 @@ function toClaim(row: ClaimRow): Claim {
 export function createRequest(
   input: {
     creatorToken: string;
+    creatorPhone?: string | null;
     nickname: string;
     title: string;
     description: string;
+    imageUrl?: string | null;
     visibility: Visibility;
     rewardType: RewardType;
     rewardNote?: string | null;
@@ -153,13 +173,15 @@ export function createRequest(
   const now = Date.now();
   const insert = db.transaction(() => {
     db.prepare(
-      `INSERT INTO requests (id, creator_token, title, description, visibility, reward_type, reward_note, target_match_count, deadline_at, status, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?)`
+      `INSERT INTO requests (id, creator_token, creator_phone, title, description, image_url, visibility, reward_type, reward_note, target_match_count, deadline_at, status, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?)`
     ).run(
       requestId,
       input.creatorToken,
+      normalizePhone(input.creatorPhone) || null,
       input.title,
       input.description,
+      input.imageUrl ?? null,
       input.visibility,
       input.rewardType,
       input.rewardNote ?? null,
@@ -482,6 +504,8 @@ export interface MineCreated {
   rootNodeId: string;
   visibility: Visibility;
   status: 'open' | 'closed';
+  // 已成功匹配的条数（认领数）——记录页直接显示是否成功，无需点进去
+  matchedCount: number;
   createdAt: number;
 }
 
@@ -489,26 +513,39 @@ export interface MineRelayed {
   nodeId: string;
   requestId: string;
   title: string;
+  // 我这一棒下游是否已达成
+  achieved: boolean;
   createdAt: number;
 }
 
+// token 命中我发起的，或手机号命中我发起的（跨设备找回）
 export function getMine(
   token: string,
+  phone: string | null,
   db: Database.Database = getDb()
 ): { created: MineCreated[]; relayed: MineRelayed[] } {
+  const p = normalizePhone(phone);
   const reqRows = db
-    .prepare('SELECT * FROM requests WHERE creator_token = ? ORDER BY created_at DESC')
-    .all(token) as RequestRow[];
+    .prepare(
+      `SELECT * FROM requests
+       WHERE creator_token = ? OR (? <> '' AND creator_phone = ?)
+       ORDER BY created_at DESC`
+    )
+    .all(token, p, p) as RequestRow[];
+  const claimCountStmt = db.prepare(
+    'SELECT COUNT(*) AS c FROM claims cl JOIN nodes n ON cl.node_id = n.id WHERE n.request_id = ?'
+  );
   const created: MineCreated[] = reqRows.map((row) => ({
     id: row.id,
     title: row.title,
     rootNodeId: getRootNode(row.id, db)!.id,
     visibility: row.visibility,
     status: row.status,
+    matchedCount: (claimCountStmt.get(row.id) as { c: number }).c,
     createdAt: row.created_at,
   }));
 
-  // 我作为接力者/认领者参与的节点（排除我自己发起的根节点）
+  // 我作为接力者/认领者参与的节点（排除我自己发起的根节点）；接力身份仍按 token
   const relayRows = db
     .prepare(
       `SELECT n.id AS node_id, n.request_id, n.created_at, r.title
@@ -517,12 +554,17 @@ export function getMine(
        ORDER BY n.created_at DESC`
     )
     .all(token) as { node_id: string; request_id: string; created_at: number; title: string }[];
-  const relayed: MineRelayed[] = relayRows.map((row) => ({
-    nodeId: row.node_id,
-    requestId: row.request_id,
-    title: row.title,
-    createdAt: row.created_at,
-  }));
+  const relayed: MineRelayed[] = relayRows.map((row) => {
+    const childrenMap = childrenByParent(listNodes(row.request_id, db));
+    const claimedNodeIds = new Set(listClaims(row.request_id, db).map((c) => c.nodeId));
+    return {
+      nodeId: row.node_id,
+      requestId: row.request_id,
+      title: row.title,
+      achieved: subtreeHasClaim(childrenMap, claimedNodeIds, row.node_id),
+      createdAt: row.created_at,
+    };
+  });
 
   return { created, relayed };
 }

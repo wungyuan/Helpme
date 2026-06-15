@@ -40,3 +40,14 @@ export function getSavedNickname(): string {
 export function saveNickname(nickname: string) {
   localStorage.setItem(NICK_KEY, nickname);
 }
+
+// 发起人手机号：本地记住，用于换设备时找回自己发起的求助
+const PHONE_KEY = 'helpme_phone';
+
+export function getSavedPhone(): string {
+  return localStorage.getItem(PHONE_KEY) ?? '';
+}
+
+export function savePhone(phone: string) {
+  localStorage.setItem(PHONE_KEY, phone);
+}

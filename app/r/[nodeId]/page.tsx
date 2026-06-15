@@ -56,6 +56,10 @@ export default async function RelayLandingPage({ params }: Props) {
       <p className='breadcrumb'>🤝 有人请你帮个忙，传一棒就是一座桥</p>
       <h1>{request.title}</h1>
       <p className='desc'>{request.description}</p>
+      {request.imageUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img className='request-image' src={request.imageUrl} alt='求助配图' />
+      )}
 
       <p className={`reward-tag ${request.rewardType}`}>
         {request.rewardType === 'paid' ? '💰 有偿请求' : '💛 友情帮助'}

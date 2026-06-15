@@ -9,13 +9,14 @@ import ChainView, { type ChainViewNode } from '@/components/ChainView';
 import CopyButton from '@/components/CopyButton';
 import SharePoster from '@/components/SharePoster';
 import SiteFooter from '@/components/SiteFooter';
-import { getClientToken } from '@/lib/clientToken';
+import { getClientToken, getSavedPhone } from '@/lib/clientToken';
 import { buildShareText } from '@/lib/share';
 
 interface RequestMeta {
   id: string;
   title: string;
   description: string;
+  imageUrl: string | null;
   visibility: 'private' | 'public';
   rewardType: 'paid' | 'friendship';
   rewardNote: string | null;
@@ -75,7 +76,9 @@ export default function MyRequestPage({ params }: { params: Promise<{ requestId:
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
-    const res = await fetch(`/api/requests/${requestId}?token=${getClientToken()}`);
+    // 带上手机号，支持换设备后凭手机号查看自己的求助
+    const phone = encodeURIComponent(getSavedPhone());
+    const res = await fetch(`/api/requests/${requestId}?token=${getClientToken()}&phone=${phone}`);
     const body = await res.json();
     if (!res.ok) {
       setError(body.message ?? '加载失败');
@@ -96,7 +99,7 @@ export default function MyRequestPage({ params }: { params: Promise<{ requestId:
     await fetch(`/api/requests/${requestId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: getClientToken(), status: next }),
+      body: JSON.stringify({ token: getClientToken(), phone: getSavedPhone(), status: next }),
     });
     load();
   }
@@ -114,13 +117,45 @@ export default function MyRequestPage({ params }: { params: Promise<{ requestId:
   const { request } = data;
   const shareUrl = rootNodeId ? `${location.origin}/r/${rootNodeId}` : null;
   const shareText = shareUrl
-    ? buildShareText({ title: request.title, url: shareUrl, rewardType: request.rewardType, asOriginator: true })
+    ? buildShareText({
+        title: request.title,
+        description: request.description,
+        url: shareUrl,
+        rewardType: request.rewardType,
+        asOriginator: true,
+      })
     : null;
+  // 已有匹配成功时，分享区收起、突出展示结果
+  const hasMatch = data.mode === 'public' ? data.chains.length > 0 : data.achievedBranchCount > 0;
+
+  const shareInner = shareText && shareUrl && (
+    <>
+      <p className='hint'>复制下面这段话发给可能认识相关人的朋友或群；也可以转发下方二维码图片。</p>
+      <pre className='share-text'>{shareText}</pre>
+      <CopyButton className='primary' text={shareText}>
+        复制这段话去分享
+      </CopyButton>
+      <div className='poster-block'>
+        <SharePoster
+          title={request.title}
+          description={request.description}
+          shareUrl={shareUrl}
+          rewardType={request.rewardType}
+          asOriginator
+        />
+        <p className='hint'>或长按上图「保存图片」转发给微信好友 / 群。</p>
+      </div>
+    </>
+  );
 
   return (
     <main className='page'>
       <h1>{request.title}</h1>
       <p className='desc'>{request.description}</p>
+      {request.imageUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img className='request-image' src={request.imageUrl} alt='求助配图' />
+      )}
       <p className={`reward-tag ${request.rewardType}`}>
         {request.rewardType === 'paid' ? '💰 有偿请求' : '💛 友情帮助'}
         {request.rewardNote && <span className='reward-note'>{request.rewardNote}</span>}
@@ -155,31 +190,22 @@ export default function MyRequestPage({ params }: { params: Promise<{ requestId:
         </div>
       )}
 
-      {shareText && data.stop.open && (
-        <div className='panel'>
-          <h3>把它发出去，链条就开始了</h3>
-          <p className='hint'>推荐转发这张图：长按保存，发给可能认识相关人的朋友或群，文字和二维码都在图里。</p>
-          {shareUrl && (
-            <div className='poster-block'>
-              <SharePoster
-                title={request.title}
-                description={request.description}
-                shareUrl={shareUrl}
-                rewardType={request.rewardType}
-                asOriginator
-              />
-              <p className='hint'>长按上图「保存图片」或直接转发给微信好友 / 群。</p>
-            </div>
-          )}
-          <details className='share-fallback'>
-            <summary className='meta'>或只复制文字链接</summary>
-            <pre className='share-text'>{shareText}</pre>
-            <CopyButton className='primary' text={shareText}>
-              复制这段话去分享
-            </CopyButton>
+      {shareInner &&
+        data.stop.open &&
+        (hasMatch ? (
+          // 已有匹配：分享收起，优先看结果
+          <details className='panel'>
+            <summary>
+              <strong>还想继续扩散？点开分享</strong>
+            </summary>
+            <div style={{ marginTop: '10px' }}>{shareInner}</div>
           </details>
-        </div>
-      )}
+        ) : (
+          <div className='panel'>
+            <h3>把它发出去，链条就开始了</h3>
+            {shareInner}
+          </div>
+        ))}
 
       <h2>
         进展

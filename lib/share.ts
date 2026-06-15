@@ -31,8 +31,10 @@ export function buildShareText({ title, description, url, rewardType, asOriginat
 }
 
 // 分享“整个程序”的宣传文案：海报与文字链接共用，保持口径一致
-export const APP_PITCH =
-  '六度搭桥 · 你想找的那个人，其实只隔几个朋友，发一张求助卡片，朋友托朋友，帮你找到能帮上忙的人：找资源、找专家、找供应商、找失联的人都行。';
+// APP_DESC 不含品牌名（海报标题已是【六度搭桥】，正文不再重复）
+export const APP_DESC =
+  '你想找的那个人，其实只隔几个朋友，发一张求助卡片，朋友托朋友，帮你找到能帮上忙的人：找资源、找专家、找供应商、找失联的人都行。';
+export const APP_PITCH = `六度搭桥 · ${APP_DESC}`;
 
 export function buildAppShareText(url: string): string {
   return [APP_PITCH, '👇 点开看看，也可以发起你自己的求助：', url].join('\n');

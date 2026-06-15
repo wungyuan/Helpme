@@ -3,13 +3,23 @@
 // 创建求助卡片：只需标题 + 描述；另选可见性与求助性质
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getClientToken, getSavedNickname, saveNickname } from '@/lib/clientToken';
+import {
+  getClientToken,
+  getSavedNickname,
+  getSavedPhone,
+  saveNickname,
+  savePhone,
+} from '@/lib/clientToken';
+import ImageUpload from '@/components/ImageUpload';
+import SiteFooter from '@/components/SiteFooter';
 
 export default function NewRequestPage() {
   const router = useRouter();
   const [nickname, setNickname] = useState('');
+  const [phone, setPhone] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
   const [visibility, setVisibility] = useState<'private' | 'public'>('private');
   const [rewardType, setRewardType] = useState<'paid' | 'friendship'>('friendship');
   const [rewardNote, setRewardNote] = useState('');
@@ -20,9 +30,11 @@ export default function NewRequestPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    // 从 localStorage 恢复昵称只能在客户端 effect 中做，否则 SSR 水合不一致
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // 从 localStorage 恢复昵称/手机号只能在客户端 effect 中做，否则 SSR 水合不一致
+    /* eslint-disable react-hooks/set-state-in-effect */
     setNickname(getSavedNickname());
+    setPhone(getSavedPhone());
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
   async function submit() {
@@ -34,9 +46,11 @@ export default function NewRequestPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           creatorToken: getClientToken(),
+          creatorPhone: phone,
           nickname,
           title,
           description,
+          imageUrl,
           visibility,
           rewardType,
           rewardNote,
@@ -48,6 +62,7 @@ export default function NewRequestPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message ?? '创建失败');
       saveNickname(nickname);
+      savePhone(phone);
       router.push(`/my/${data.requestId}?root=${data.rootNodeId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : '创建失败');
@@ -65,6 +80,16 @@ export default function NewRequestPage() {
           <input value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder='链条上的人会看到' />
         </label>
         <label>
+          你的手机号
+          <input
+            type='tel'
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder='用于换手机/电脑时找回你发起的求助'
+          />
+        </label>
+        <p className='hint'>手机号只用于你自己跨设备找回求助，不会展示给接力者。</p>
+        <label>
           标题
           <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder='一句话说清你要找谁、找什么' />
         </label>
@@ -76,6 +101,10 @@ export default function NewRequestPage() {
             rows={4}
             placeholder='背景、为什么找、希望对方帮什么忙——越具体越容易接上'
           />
+        </label>
+        <label>
+          配图（可选，辅助说明）
+          <ImageUpload value={imageUrl} onChange={setImageUrl} />
         </label>
 
         <label>
@@ -158,6 +187,7 @@ export default function NewRequestPage() {
           {busy ? '创建中…' : '创建并获取分享链接'}
         </button>
       </div>
+      <SiteFooter />
     </main>
   );
 }

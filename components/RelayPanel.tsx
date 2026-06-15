@@ -103,7 +103,11 @@ export default function RelayPanel({ nodeId, title, description, visibility, rew
     return (
       <div className='panel success'>
         <h3>🎉 你已经接上这一棒！</h3>
-        <p>推荐转发这张图：长按图片保存，再发给朋友或群，TA 长按就能识别二维码打开——文字和二维码都在图里。</p>
+        <p>复制下面这段话发给你觉得“可能认识”的朋友或群；也可以转发下方二维码图片。</p>
+        <pre className='share-text'>{shareText}</pre>
+        <CopyButton className='primary' text={shareText}>
+          复制这段话去转发
+        </CopyButton>
         <div className='poster-block'>
           <SharePoster
             title={title}
@@ -112,15 +116,8 @@ export default function RelayPanel({ nodeId, title, description, visibility, rew
             rewardType={rewardType}
             asOriginator={false}
           />
-          <p className='hint'>长按上图「保存图片」或直接转发给微信好友 / 群。</p>
+          <p className='hint'>或长按上图「保存图片」转发给微信好友 / 群。</p>
         </div>
-        <details className='share-fallback'>
-          <summary className='meta'>或只复制文字链接</summary>
-          <pre className='share-text'>{shareText}</pre>
-          <CopyButton className='primary' text={shareText}>
-            复制这段话去转发
-          </CopyButton>
-        </details>
         <p className='hint'>
           想随时看看你这一棒传到哪了？<Link href={`/me/${newNodeId}`}>查看我的接力进展</Link>
         </p>

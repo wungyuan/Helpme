@@ -1,16 +1,23 @@
 import { NextResponse } from 'next/server';
-import { getNodeProgress, getRequest, getRequestChains, getRootNode, setRequestStatus } from '@/lib/store';
+import {
+  canViewAsCreator,
+  getNodeProgress,
+  getRequest,
+  getRequestChains,
+  getRootNode,
+  setRequestStatus,
+} from '@/lib/store';
 
 // PATCH /api/requests/:id 发起人手动结束 / 重新开放求助
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const body = await req.json().catch(() => null);
-  const { token, status } = body ?? {};
+  const { token, phone, status } = body ?? {};
   const request = getRequest(id);
   if (!request) {
     return NextResponse.json({ error: 'not_found', message: '求助不存在' }, { status: 404 });
   }
-  if (token !== request.creatorToken) {
+  if (!canViewAsCreator(request, token ?? null, phone ?? null)) {
     return NextResponse.json({ error: 'forbidden', message: '只有发起人可以操作' }, { status: 403 });
   }
   if (status !== 'open' && status !== 'closed') {
@@ -25,13 +32,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 // private：只返回发起人“直接转发的人”里哪一支达成；联系方式仅在发起人本人是认领者直接上一跳时给出
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const token = new URL(req.url).searchParams.get('token');
+  const url = new URL(req.url);
+  const token = url.searchParams.get('token');
+  const phone = url.searchParams.get('phone');
 
   const request = getRequest(id);
   if (!request) {
     return NextResponse.json({ error: 'not_found', message: '求助不存在' }, { status: 404 });
   }
-  if (token !== request.creatorToken) {
+  if (!canViewAsCreator(request, token, phone)) {
     return NextResponse.json({ error: 'forbidden', message: '只有发起人可以查看' }, { status: 403 });
   }
 
@@ -39,6 +48,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     id: request.id,
     title: request.title,
     description: request.description,
+    imageUrl: request.imageUrl,
     visibility: request.visibility,
     rewardType: request.rewardType,
     rewardNote: request.rewardNote,

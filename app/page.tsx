@@ -1,10 +1,12 @@
 import Link from 'next/link';
 import AppShare from '@/components/AppShare';
+import HomeNotice from '@/components/HomeNotice';
 
 export default function Home() {
   return (
     <main className='page'>
       <h1>六度搭桥</h1>
+      <HomeNotice />
       <p className='lead'>
         你想找的那个人，其实并不远。六度分隔理论说，你和世界上任何人之间，最多隔着几个朋友。
         发起一张求助卡片，让朋友一棒接一棒地传下去，把那条隐藏的人脉链条点亮。

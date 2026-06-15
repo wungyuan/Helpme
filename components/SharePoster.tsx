@@ -85,21 +85,21 @@ export default function SharePoster({
       const descRaw = !body && description?.trim() ? description.trim() : '';
       const descText = descRaw.length > 90 ? descRaw.slice(0, 90) + '…' : descRaw;
 
-      measure.font = '600 28px -apple-system, "PingFang SC", sans-serif';
+      measure.font = '600 31px -apple-system, "PingFang SC", sans-serif';
       const titleLines = wrapByChar(measure, `【${title}】`, contentW);
-      measure.font = '17px -apple-system, "PingFang SC", sans-serif';
+      measure.font = '20px -apple-system, "PingFang SC", sans-serif';
       const descLines = descText ? wrapByChar(measure, descText, contentW) : [];
       const askLines = wrapByChar(measure, askText, contentW);
 
       // 估算总高度
       let h = pad;
-      h += 30; // lead
-      h += titleLines.length * 38 + 8;
-      if (descLines.length) h += descLines.length * 25 + 8;
-      if (showReward) h += 26;
-      h += askLines.length * 26 + 18;
+      h += 34; // lead
+      h += titleLines.length * 42 + 8;
+      if (descLines.length) h += descLines.length * 29 + 8;
+      if (showReward) h += 30;
+      h += askLines.length * 29 + 18;
       h += qrSize + 16;
-      h += 24; // caption
+      h += 28; // caption
       h += pad;
 
       const canvas = document.createElement('canvas');
@@ -118,50 +118,50 @@ export default function SharePoster({
       ctx.textBaseline = 'top';
 
       ctx.fillStyle = '#07c160';
-      ctx.font = '600 20px -apple-system, "PingFang SC", sans-serif';
+      ctx.font = '600 23px -apple-system, "PingFang SC", sans-serif';
       ctx.fillText(leadText, pad, y);
-      y += 36;
+      y += 40;
 
       ctx.fillStyle = '#1f2329';
-      ctx.font = '600 28px -apple-system, "PingFang SC", sans-serif';
+      ctx.font = '600 31px -apple-system, "PingFang SC", sans-serif';
       for (const l of titleLines) {
         ctx.fillText(l, pad, y);
-        y += 38;
+        y += 42;
       }
       y += 6;
 
       if (descLines.length) {
         ctx.fillStyle = '#3f4654';
-        ctx.font = '17px -apple-system, "PingFang SC", sans-serif';
+        ctx.font = '20px -apple-system, "PingFang SC", sans-serif';
         for (const l of descLines) {
           ctx.fillText(l, pad, y);
-          y += 25;
+          y += 29;
         }
         y += 8;
       }
 
       if (showReward) {
         ctx.fillStyle = rewardType === 'paid' ? '#b26a00' : '#c2185b';
-        ctx.font = '15px -apple-system, "PingFang SC", sans-serif';
+        ctx.font = '17px -apple-system, "PingFang SC", sans-serif';
         ctx.fillText(rewardLine, pad, y);
-        y += 28;
+        y += 30;
       }
 
       ctx.fillStyle = '#5a6270';
-      ctx.font = '17px -apple-system, "PingFang SC", sans-serif';
+      ctx.font = '20px -apple-system, "PingFang SC", sans-serif';
       for (const l of askLines) {
         ctx.fillText(l, pad, y);
-        y += 26;
+        y += 29;
       }
       y += 18;
 
       // 二维码居中
       const qx = (W - qrSize) / 2;
       ctx.drawImage(qrImg, qx, y, qrSize, qrSize);
-      y += qrSize + 10;
+      y += qrSize + 12;
 
       ctx.fillStyle = '#8a919c';
-      ctx.font = '14px -apple-system, "PingFang SC", sans-serif';
+      ctx.font = '16px -apple-system, "PingFang SC", sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(captionText, W / 2, y);
 
